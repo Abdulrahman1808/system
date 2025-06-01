@@ -1,0 +1,6 @@
+{
+    "venvPath": ".",
+    "venv": "tutorial_env",
+    "reportMissingImports": false,
+    "reportMissingModuleSource": false
+} 
