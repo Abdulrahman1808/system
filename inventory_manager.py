@@ -225,9 +225,13 @@ class InventoryManager:
         dialog.title(self.LANGUAGES[self.current_language].get("add_item", "Add Item"))
         dialog.geometry("400x500")
         
+        # Create scrollable frame for the form content
+        scrollable_form_frame = ctk.CTkScrollableFrame(dialog, orientation='vertical')
+        scrollable_form_frame.pack(fill='both', expand=True, padx=20, pady=20)
+
         # Item form
-        form_frame = create_styled_frame(dialog, style='card')
-        form_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        form_frame = create_styled_frame(scrollable_form_frame, style='card') # Use styled frame inside scrollable
+        form_frame.pack(fill='both', expand=True) # Removed padx, pady as they are on the scrollable frame
         
         # Name
         name_label = create_styled_label(
@@ -238,7 +242,7 @@ class InventoryManager:
         name_label.pack(pady=(20, 5))
         
         name_entry = create_styled_entry(form_frame)
-        name_entry.pack(fill='x', padx=20, pady=(0, 20))
+        name_entry.pack(fill='x', padx=20, pady=(0, 15))
         
         # Category
         category_label = create_styled_label(
@@ -249,7 +253,7 @@ class InventoryManager:
         category_label.pack(pady=(0, 5))
         
         category_entry = create_styled_entry(form_frame)
-        category_entry.pack(fill='x', padx=20, pady=(0, 20))
+        category_entry.pack(fill='x', padx=20, pady=(0, 15))
         
         # Quantity
         quantity_label = create_styled_label(
@@ -260,7 +264,7 @@ class InventoryManager:
         quantity_label.pack(pady=(0, 5))
         
         quantity_entry = create_styled_entry(form_frame)
-        quantity_entry.pack(fill='x', padx=20, pady=(0, 20))
+        quantity_entry.pack(fill='x', padx=20, pady=(0, 15))
         
         # Min Quantity
         min_quantity_label = create_styled_label(
@@ -271,7 +275,7 @@ class InventoryManager:
         min_quantity_label.pack(pady=(0, 5))
         
         min_quantity_entry = create_styled_entry(form_frame)
-        min_quantity_entry.pack(fill='x', padx=20, pady=(0, 20))
+        min_quantity_entry.pack(fill='x', padx=20, pady=(0, 15))
         
         # Location
         location_label = create_styled_label(
@@ -282,7 +286,7 @@ class InventoryManager:
         location_label.pack(pady=(0, 5))
         
         location_entry = create_styled_entry(form_frame)
-        location_entry.pack(fill='x', padx=20, pady=(0, 20))
+        location_entry.pack(fill='x', padx=20, pady=(0, 15))
         
         # Save button
         save_button = create_styled_button(
@@ -307,9 +311,13 @@ class InventoryManager:
         dialog.title(self.LANGUAGES[self.current_language].get("edit_item", "Edit Item"))
         dialog.geometry("400x500")
         
+        # Create scrollable frame for the form content
+        scrollable_form_frame = ctk.CTkScrollableFrame(dialog, orientation='vertical')
+        scrollable_form_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
         # Item form
-        form_frame = create_styled_frame(dialog, style='card')
-        form_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        form_frame = create_styled_frame(scrollable_form_frame, style='card') # Use styled frame inside scrollable
+        form_frame.pack(fill='both', expand=True) # Removed padx, pady as they are on the scrollable frame
         
         # Name
         name_label = create_styled_label(
@@ -321,7 +329,7 @@ class InventoryManager:
         
         name_entry = create_styled_entry(form_frame)
         name_entry.insert(0, item.get('name', ''))
-        name_entry.pack(fill='x', padx=20, pady=(0, 20))
+        name_entry.pack(fill='x', padx=20, pady=(0, 15))
         
         # Category
         category_label = create_styled_label(
@@ -333,7 +341,7 @@ class InventoryManager:
         
         category_entry = create_styled_entry(form_frame)
         category_entry.insert(0, item.get('category', ''))
-        category_entry.pack(fill='x', padx=20, pady=(0, 20))
+        category_entry.pack(fill='x', padx=20, pady=(0, 15))
         
         # Quantity
         quantity_label = create_styled_label(
@@ -345,7 +353,7 @@ class InventoryManager:
         
         quantity_entry = create_styled_entry(form_frame)
         quantity_entry.insert(0, str(item.get('quantity', 0)))
-        quantity_entry.pack(fill='x', padx=20, pady=(0, 20))
+        quantity_entry.pack(fill='x', padx=20, pady=(0, 15))
         
         # Min Quantity
         min_quantity_label = create_styled_label(
@@ -357,7 +365,7 @@ class InventoryManager:
         
         min_quantity_entry = create_styled_entry(form_frame)
         min_quantity_entry.insert(0, str(item.get('min_quantity', 0)))
-        min_quantity_entry.pack(fill='x', padx=20, pady=(0, 20))
+        min_quantity_entry.pack(fill='x', padx=20, pady=(0, 15))
         
         # Location
         location_label = create_styled_label(
@@ -369,7 +377,7 @@ class InventoryManager:
         
         location_entry = create_styled_entry(form_frame)
         location_entry.insert(0, item.get('location', ''))
-        location_entry.pack(fill='x', padx=20, pady=(0, 20))
+        location_entry.pack(fill='x', padx=20, pady=(0, 15))
         
         # Save button
         save_button = create_styled_button(

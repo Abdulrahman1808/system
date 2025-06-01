@@ -29,7 +29,9 @@ class MainMenu:
                 'toggle_theme': 'Toggle Theme',
                 'logout': 'Logout',
                 'welcome': 'Welcome to Hookah Shop Manager',
-                'quick_actions': 'Quick Actions'
+                'quick_actions': 'Quick Actions',
+                'expenses_bills': 'Expenses and Bills',
+                'notifications_alerts': 'Notifications and Alerts'
             },
             'ar': {
                 'app_title': 'مدير متجر الشيشة',
@@ -43,7 +45,12 @@ class MainMenu:
                 'toggle_theme': 'تبديل المظهر',
                 'logout': 'تسجيل الخروج',
                 'welcome': 'مرحباً بك في مدير متجر الشيشة',
-                'quick_actions': 'إجراءات سريعة'
+                'quick_actions': 'إجراءات سريعة',
+                'expenses_bills': 'المصاريف والفواتير',
+                'notifications_alerts': 'الإشعارات والتنبيهات',
+                'manage_customers': 'إدارة العملاء',
+                'notifications': 'الإشعارات',
+                'reporting_analytics': 'التقارير والتحليلات'
             }
         }
         self.callbacks = callbacks
@@ -58,12 +65,12 @@ class MainMenu:
         main_frame = create_styled_frame(self.root, style='section')
         main_frame.pack(fill='both', expand=True)
         
-        # Create sidebar with gradient effect
-        sidebar = create_styled_frame(main_frame, style='sidebar')
-        sidebar.pack(side='left', fill='y', padx=0, pady=0)
+        # Create scrollable sidebar
+        self.sidebar = ctk.CTkScrollableFrame(main_frame, orientation='vertical', fg_color=COLORS['sidebar'], width=250)
+        self.sidebar.pack(side='left', fill='y', padx=0, pady=0)
         
         # Add shadow effect to sidebar
-        sidebar.configure(border_width=0)
+        self.sidebar.configure(border_width=0)
         shadow_frame = ctk.CTkFrame(
             main_frame,
             fg_color=COLORS['shadow_color'],
@@ -76,7 +83,7 @@ class MainMenu:
         
         # Logo/Title
         title_label = create_styled_label(
-            sidebar,
+            self.sidebar,
             text=self.LANGUAGES[self.current_language].get("app_title", "Hookah Shop Manager"),
             style='heading'
         )
@@ -89,15 +96,16 @@ class MainMenu:
             ("record_sale", "Record Sale", self.callbacks['record_sale'], "💰"),
             ("view_sales", "View Sales Records", self.callbacks['view_sales'], "📈"),
             ("manage_suppliers", "Manage Suppliers", self.callbacks['manage_suppliers'], "🤝"),
-            ("manage_employees", "Manage Employees", self.callbacks['manage_employees'], "👥")
+            ("manage_employees", "Manage Employees", self.callbacks['manage_employees'], "👥"),
+            ("manage_customers", "Manage Customers", self.callbacks['manage_customers'], "👥"),
+            ("reporting_analytics", "Reporting and Analytics", self.callbacks['reporting_analytics'], "📊"),
+            ("expenses_bills", "Expenses and Bills", self.callbacks['expenses_bills'], "💸"),
+            ("notifications", "Notifications", self.callbacks['notifications'], "🔔")
         ]
         
         for key, default_text, callback, icon in menu_items:
-            button_frame = create_styled_frame(sidebar, style='sidebar')
-            button_frame.pack(fill='x', padx=15, pady=5)
-            
             button = create_styled_button(
-                button_frame,
+                self.sidebar,
                 text=f"{icon} {self.LANGUAGES[self.current_language].get(key, default_text)}",
                 style='sidebar',
                 command=callback,
@@ -107,7 +115,7 @@ class MainMenu:
             button.pack(fill='x', padx=5, pady=5)
         
         # Language switcher
-        lang_frame = create_styled_frame(sidebar, style='sidebar')
+        lang_frame = create_styled_frame(self.sidebar, style='sidebar')
         lang_frame.pack(side='bottom', fill='x', padx=15, pady=20)
         
         lang_label = create_styled_label(
@@ -149,7 +157,7 @@ class MainMenu:
         
         # Logout button
         logout_button = create_styled_button(
-            sidebar,
+            self.sidebar,
             text="🚪 " + self.LANGUAGES[self.current_language].get("logout", "Logout"),
             style='error',
             command=self.callbacks['logout'],

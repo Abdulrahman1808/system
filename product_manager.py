@@ -11,9 +11,12 @@ from theme import (
     create_styled_entry, create_styled_frame,
     create_styled_label, create_styled_option_menu
 )
+import os
+from datetime import datetime
+from PIL import Image
 
 class ProductManager:
-    def __init__(self, root, current_language, languages, back_callback, hookah_types=None, hookah_flavors=None):
+    def __init__(self, root, current_language, languages, back_callback, hookah_types=None, hookah_flavors=None, record_sale_instance=None):
         self.root = root
         self.current_language = current_language
         self.LANGUAGES = languages
@@ -21,6 +24,7 @@ class ProductManager:
         self.hookah_types = hookah_types or []
         self.hookah_flavors = hookah_flavors or []
         self.products = load_data("products") or []
+        self.record_sale_instance = record_sale_instance
 
     def refresh_products(self):
         """Refresh the products list from database and update display"""
@@ -149,6 +153,7 @@ class ProductManager:
         
         # Table headers
         headers = [
+            ("image", "Image"),
             ("product_name", "Product Name"),
             ("product_type", "Type"),
             ("product_flavor", "Flavor"),
@@ -168,44 +173,61 @@ class ProductManager:
         # Products list
         for i, product in enumerate(self.products, 1):
             # Product details
+            image_path = product.get('image_path')
+            if image_path and os.path.exists(image_path):
+                try:
+                    img = Image.open(image_path)
+                    img.thumbnail((50, 50)) # Resize for list view
+                    # Use CTkImage for compatibility with customtkinter
+                    img_tk = ctk.CTkImage(light_image=img, dark_image=img, size=(50, 50))
+                    image_label = ctk.CTkLabel(scrollable_table, image=img_tk, text="")
+                    image_label.image = img_tk # Keep a reference!
+                except Exception as e:
+                    print(f"[ERROR] Could not load product image {image_path}: {e}")
+                    image_label = create_styled_label(scrollable_table, text=self.LANGUAGES[self.current_language].get("error_loading_image", "Error loading image"), style='small')
+            else:
+                 image_label = create_styled_label(scrollable_table, text=self.LANGUAGES[self.current_language].get("no_image", "No Image"), style='small')
+
+            image_label.grid(row=i, column=0, padx=10, pady=5, sticky='w') # Place in the first column
+
             name_label = create_styled_label(
                 scrollable_table,
                 text=product.get('name', ''),
                 style='body'
             )
-            name_label.grid(row=i, column=0, padx=10, pady=10, sticky='w')
+            name_label.grid(row=i, column=1, padx=10, pady=10, sticky='w') # Shifted to second column
             
             type_label = create_styled_label(
                 scrollable_table,
                 text=product.get('type', ''),
                 style='body'
             )
-            type_label.grid(row=i, column=1, padx=10, pady=10, sticky='w')
+            type_label.grid(row=i, column=2, padx=10, pady=10, sticky='w') # Shifted
             
             flavor_label = create_styled_label(
                 scrollable_table,
                 text=product.get('flavor', ''),
                 style='body'
             )
-            flavor_label.grid(row=i, column=2, padx=10, pady=10, sticky='w')
+            flavor_label.grid(row=i, column=3, padx=10, pady=10, sticky='w') # Shifted
             
             price_label = create_styled_label(
                 scrollable_table,
                 text=f"${product.get('price', 0):.2f}",
                 style='body'
             )
-            price_label.grid(row=i, column=3, padx=10, pady=10, sticky='w')
+            price_label.grid(row=i, column=4, padx=10, pady=10, sticky='w') # Shifted
             
             status_label = create_styled_label(
                 scrollable_table,
                 text=product.get('status', 'active'),
                 style='body'
             )
-            status_label.grid(row=i, column=4, padx=10, pady=10, sticky='w')
+            status_label.grid(row=i, column=5, padx=10, pady=10, sticky='w') # Shifted
             
             # Action buttons
             actions_frame = create_styled_frame(scrollable_table, style='card')
-            actions_frame.grid(row=i, column=5, padx=10, pady=10, sticky='w')
+            actions_frame.grid(row=i, column=6, padx=10, pady=10, sticky='w') # Shifted
             
             edit_button = create_styled_button(
                 actions_frame,
@@ -233,9 +255,13 @@ class ProductManager:
         dialog.configure(fg_color=COLORS['background'])
         dialog.grab_set()
         
+        # Create scrollable frame for the form content
+        scrollable_form_frame = ctk.CTkScrollableFrame(dialog, orientation='vertical')
+        scrollable_form_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
         # Create form
-        form_frame = create_styled_frame(dialog, style='card')
-        form_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        form_frame = create_styled_frame(scrollable_form_frame, style='card')
+        form_frame.pack(fill='both', expand=True)
         
         # Title
         title_label = create_styled_label(
@@ -254,7 +280,7 @@ class ProductManager:
         name_label.pack(pady=(0, 5))
         
         name_entry = create_styled_entry(form_frame)
-        name_entry.pack(fill='x', padx=20, pady=(0, 20))
+        name_entry.pack(fill='x', padx=20, pady=(0, 10))
         
         # Product type
         type_label = create_styled_label(
@@ -265,7 +291,7 @@ class ProductManager:
         type_label.pack(pady=(0, 5))
         
         type_entry = create_styled_entry(form_frame)
-        type_entry.pack(fill='x', padx=20, pady=(0, 20))
+        type_entry.pack(fill='x', padx=20, pady=(0, 10))
         
         # Product flavor
         flavor_label = create_styled_label(
@@ -276,7 +302,7 @@ class ProductManager:
         flavor_label.pack(pady=(0, 5))
         
         flavor_entry = create_styled_entry(form_frame)
-        flavor_entry.pack(fill='x', padx=20, pady=(0, 20))
+        flavor_entry.pack(fill='x', padx=20, pady=(0, 10))
         
         # Price
         price_label = create_styled_label(
@@ -287,7 +313,7 @@ class ProductManager:
         price_label.pack(pady=(0, 5))
         
         price_entry = create_styled_entry(form_frame)
-        price_entry.pack(fill='x', padx=20, pady=(0, 20))
+        price_entry.pack(fill='x', padx=20, pady=(0, 10))
         
         # Status
         status_label = create_styled_label(
@@ -301,11 +327,45 @@ class ProductManager:
             form_frame,
             values=["Available", "Out of Stock", "Discontinued"]
         )
-        status_menu.pack(fill='x', padx=20, pady=(0, 20))
+        status_menu.pack(fill='x', padx=20, pady=(0, 10))
         
+        # Image selection
+        image_label = create_styled_label(
+            form_frame,
+            text=self.LANGUAGES[self.current_language].get("product_image", "Product Image"),
+            style='subheading'
+        )
+        image_label.pack(pady=(0, 5))
+        
+        image_frame = create_styled_frame(form_frame, style='card')
+        image_frame.pack(fill='x', padx=20, pady=(0, 10))
+        
+        self.add_image_path_label = create_styled_label(
+            image_frame,
+            text=self.LANGUAGES[self.current_language].get("no_image_selected", "No image selected"),
+            style='body'
+        )
+        self.add_image_path_label.pack(side='left', fill='x', expand=True, padx=(0, 10))
+        
+        select_image_button = create_styled_button(
+            image_frame,
+            text=self.LANGUAGES[self.current_language].get("select_image", "Select Image"),
+            style='outline',
+            width=100,
+            command=self.select_image
+        )
+        select_image_button.pack(side='right')
+        
+        # Store the selected image path temporarily for the dialog
+        self.selected_image_path = None
+
+        # Image preview (for Add dialog)
+        self.add_image_preview = ctk.CTkLabel(form_frame, text="", width=100, height=100)
+        self.add_image_preview.pack(pady=(10, 10))
+
         # Save button
         save_button = create_styled_button(
-            form_frame,
+            scrollable_form_frame,
             text=self.LANGUAGES[self.current_language].get("save", "Save"),
             style='primary',
             command=lambda: self.save_product(
@@ -314,7 +374,8 @@ class ProductManager:
                 type_entry.get(),
                 flavor_entry.get(),
                 price_entry.get(),
-                status_menu.get()
+                status_menu.get(),
+                self.selected_image_path
             )
         )
         save_button.pack(fill='x', padx=20, pady=(0, 20))
@@ -337,13 +398,17 @@ class ProductManager:
         
         dialog = ctk.CTkToplevel(self.root)
         dialog.title("Edit Product")
-        dialog.geometry("400x500")
+        dialog.geometry("400x550")
         dialog.configure(fg_color=COLORS['background'])
         dialog.grab_set()
         
+        # Create scrollable frame for the form content
+        scrollable_form_frame = ctk.CTkScrollableFrame(dialog, orientation='vertical')
+        scrollable_form_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
         # Create form
-        form_frame = create_styled_frame(dialog, style='card')
-        form_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        form_frame = create_styled_frame(scrollable_form_frame, style='card')
+        form_frame.pack(fill='both', expand=True)
         
         # Title
         title_label = create_styled_label(
@@ -363,75 +428,126 @@ class ProductManager:
         
         name_entry = create_styled_entry(form_frame)
         name_entry.insert(0, product['name'])
-        name_entry.pack(fill='x', padx=20, pady=(0, 20))
+        name_entry.pack(fill='x', padx=20, pady=(0, 10))
         
         # Product type
         type_label = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("product_type", "Product Type"),
+            text=self.LANGUAGES[self.current_language].get("product_type", "Type"),
             style='subheading'
         )
         type_label.pack(pady=(0, 5))
         
-        type_entry = create_styled_entry(form_frame)
-        type_entry.insert(0, product['type'])
-        type_entry.pack(fill='x', padx=20, pady=(0, 20))
+        type_menu = create_styled_option_menu(
+            form_frame,
+            values=[self.LANGUAGES[self.current_language].get(t, t.capitalize()) for t in self.hookah_types]
+        )
+        type_menu.set(product['type'])
+        type_menu.pack(fill='x', padx=20, pady=(0, 10))
         
         # Product flavor
         flavor_label = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("product_flavor", "Product Flavor"),
+            text=self.LANGUAGES[self.current_language].get("product_flavor", "Flavor"),
             style='subheading'
         )
         flavor_label.pack(pady=(0, 5))
         
-        flavor_entry = create_styled_entry(form_frame)
-        flavor_entry.insert(0, product['flavor'])
-        flavor_entry.pack(fill='x', padx=20, pady=(0, 20))
+        flavor_menu = create_styled_option_menu(
+            form_frame,
+            values=[self.LANGUAGES[self.current_language].get(f, f.capitalize()) for f in self.hookah_flavors]
+        )
+        flavor_menu.set(product['flavor'])
+        flavor_menu.pack(fill='x', padx=20, pady=(0, 10))
         
-        # Price
+        # Product price
         price_label = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("price", "Price"),
+            text=self.LANGUAGES[self.current_language].get("product_price", "Price"),
             style='subheading'
         )
         price_label.pack(pady=(0, 5))
         
         price_entry = create_styled_entry(form_frame)
         price_entry.insert(0, str(product['price']))
-        price_entry.pack(fill='x', padx=20, pady=(0, 20))
+        price_entry.pack(fill='x', padx=20, pady=(0, 10))
         
-        # Status
+        # Product status
         status_label = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("status", "Status"),
+            text=self.LANGUAGES[self.current_language].get("product_status", "Status"),
             style='subheading'
         )
         status_label.pack(pady=(0, 5))
         
         status_menu = create_styled_option_menu(
             form_frame,
-            values=["Available", "Out of Stock", "Discontinued"]
+            values=[self.LANGUAGES[self.current_language].get('status_active', 'Active'),
+                    self.LANGUAGES[self.current_language].get('status_discontinued', 'Discontinued')]
         )
-        status_menu.set(product['status'])
-        status_menu.pack(fill='x', padx=20, pady=(0, 20))
+        status_menu.set(self.LANGUAGES[self.current_language].get(f'status_{product.get('status', 'active')}', product.get('status', 'Active')))
+        status_menu.pack(fill='x', padx=20, pady=(0, 10))
         
-        # Save button
-        save_button = create_styled_button(
+        # Image selection
+        image_label_edit = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("save", "Save"),
+            text=self.LANGUAGES[self.current_language].get("product_image", "Product Image"),
+            style='subheading'
+        )
+        image_label_edit.pack(pady=(0, 5))
+        
+        image_frame_edit = create_styled_frame(form_frame, style='card')
+        image_frame_edit.pack(fill='x', padx=20, pady=(0, 10))
+        
+        self.edit_image_path_label = create_styled_label(
+            image_frame_edit,
+            text=product.get('image_path', self.LANGUAGES[self.current_language].get("no_image_selected", "No image selected")),
+            style='body'
+        )
+        self.edit_image_path_label.pack(side='left', fill='x', expand=True, padx=(0, 10))
+        
+        select_image_button_edit = create_styled_button(
+            image_frame_edit,
+            text=self.LANGUAGES[self.current_language].get("select_image", "Select Image"),
+            style='outline',
+            width=100,
+            command=self.select_image
+        )
+        select_image_button_edit.pack(side='right')
+        
+        # Store the selected image path temporarily for the dialog
+        self.selected_image_path = product.get('image_path', None)
+
+        # Image preview (for Edit dialog)
+        self.edit_image_preview = ctk.CTkLabel(form_frame, text="", width=100, height=100)
+        self.edit_image_preview.pack(pady=(10, 10))
+        # Display existing image if available
+        if self.selected_image_path and os.path.exists(self.selected_image_path):
+            try:
+                img = Image.open(self.selected_image_path)
+                img.thumbnail((100, 100)) # Resize for preview
+                img_tk = ctk.CTkImage(light_image=img, dark_image=img, size=(100, 100))
+                self.edit_image_preview.configure(image=img_tk, text="")
+            except Exception as e:
+                print(f"[ERROR] Could not load image for preview: {e}")
+
+        # Update button
+        update_button = create_styled_button(
+            form_frame,
+            text=self.LANGUAGES[self.current_language].get("update", "Update"),
             style='primary',
             command=lambda: self.update_product(
                 dialog,
-                product_name,
+                product['name'],
                 name_entry.get(),
-                type_entry.get(),
-                flavor_entry.get(),
+                type_menu.get(),
+                flavor_menu.get(),
                 price_entry.get(),
-                status_menu.get()
+                status_menu.get(),
+                self.selected_image_path
             )
         )
-        save_button.pack(fill='x', padx=20, pady=(0, 20))
+        update_button.pack(pady=20)
         
         # Cancel button
         cancel_button = create_styled_button(
@@ -440,159 +556,170 @@ class ProductManager:
             style='outline',
             command=dialog.destroy
         )
-        cancel_button.pack(fill='x', padx=20, pady=(0, 20))
+        cancel_button.pack(pady=10)
 
-    def save_product(self, dialog, name, type, flavor, price, status):
+    def select_image(self):
+        """Open a file dialog to select an image and copy it to the images directory"""
+        try:
+            # Use tkinter's file dialog to select an image file
+            file_path = ctk.filedialog.askopenfilename(
+                title=self.LANGUAGES[self.current_language].get("select_image_file", "Select Image File"),
+                filetypes=(
+                    (self.LANGUAGES[self.current_language].get("image_files", "Image Files"), "*.png *.jpg *.jpeg *.gif"),
+                    (self.LANGUAGES[self.current_language].get("all_files", "All files"), "*.*")
+                )
+            )
+
+            if file_path:
+                # Ensure the images directory exists
+                images_dir = "images/products"
+                os.makedirs(images_dir, exist_ok=True)
+
+                # Generate a unique filename (using original filename with a timestamp)
+                original_filename = os.path.basename(file_path)
+                timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
+                new_filename = f"{timestamp}_{original_filename}"
+                destination_path = os.path.join(images_dir, new_filename)
+
+                # Copy the file
+                import shutil
+                shutil.copy2(file_path, destination_path)
+                print(f"[DEBUG] Copied image from {file_path} to {destination_path}")
+
+                # Store the relative path (or just the filename) in the product data
+                # Let's store the relative path from the workspace root
+                relative_path = os.path.relpath(destination_path, os.getcwd())
+                self.selected_image_path = relative_path
+
+                # Update the label and preview in the currently open dialog (add or edit)
+                try:
+                    img = Image.open(file_path)
+                    img.thumbnail((100, 100)) # Resize for preview
+                    img_tk = ctk.CTkImage(light_image=img, dark_image=img, size=(100, 100))
+
+                    if hasattr(self, 'add_image_path_label') and self.add_image_path_label.winfo_exists():
+                         self.add_image_path_label.configure(text=os.path.basename(relative_path))
+                         if hasattr(self, 'add_image_preview') and self.add_image_preview.winfo_exists():
+                             self.add_image_preview.configure(image=img_tk, text="")
+
+                    elif hasattr(self, 'edit_image_path_label') and self.edit_image_path_label.winfo_exists():
+                         self.edit_image_path_label.configure(text=os.path.basename(relative_path))
+                         if hasattr(self, 'edit_image_preview') and self.edit_image_preview.winfo_exists():
+                              self.edit_image_preview.configure(image=img_tk, text="")
+
+                except Exception as e:
+                     print(f"[ERROR] Could not create image preview: {e}")
+                     show_error(f"Error creating image preview: {str(e)}", self.current_language) # Show error to user as well
+
+                show_success(self.LANGUAGES[self.current_language].get("image_selected_success", "Image selected successfully."), self.current_language)
+
+        except Exception as e:
+            show_error(f"Error selecting image: {str(e)}", self.current_language)
+            import traceback
+            traceback.print_exc()
+
+    def save_product(self, dialog, name, type, flavor, price, status, image_path):
         """Save a new product"""
-        if not all([name, type, flavor, price]):
-            show_error("Please fill all fields", self.current_language)
+        if not name or not price:
+            show_error(self.LANGUAGES[self.current_language].get("name_price_required", "Product Name and Price are required."), self.current_language)
             return
             
         try:
             price = float(price)
         except ValueError:
-            show_error("Invalid price format", self.current_language)
+            show_error(self.LANGUAGES[self.current_language].get("invalid_price", "Invalid price. Please enter a number."), self.current_language)
             return
             
-        # Create new product
-        product = {
-            'id': str(len(self.products) + 1),
+        # Check if product with the same name already exists
+        if any(p.get('name', '').lower() == name.lower() for p in self.products):
+            show_error(self.LANGUAGES[self.current_language].get("product_exists", "Product with this name already exists."), self.current_language)
+            return
+            
+        new_product = {
+            'id': get_next_id('products'),
             'name': name,
             'type': type,
             'flavor': flavor,
             'price': price,
-            'status': status
+            'status': status,
+            'image_path': image_path
         }
         
-        # Add to products list
-        self.products.append(product)
-        
-        # Save to MongoDB
+        self.products.append(new_product)
         save_data("products", self.products)
-        
-        # Close dialog and refresh
+        # Notify RecordSale to refresh its list
+        if self.record_sale_instance:
+            self.record_sale_instance.refresh_products()
+        self.refresh_products()
         dialog.destroy()
-        self.manage_products()
-        show_success(self.LANGUAGES[self.current_language].get("product_added", "Product added successfully"), self.current_language)
+        show_success(self.LANGUAGES[self.current_language].get("product_added_success", "Product added successfully!"), self.current_language)
 
-    def update_product(self, dialog, old_name, name, type, flavor, price, status):
+    def update_product(self, dialog, old_name, name, type, flavor, price, status, image_path):
         """Update an existing product"""
-        if not all([name, type, flavor, price]):
-            show_error("Please fill all fields", self.current_language)
+        if not name or not price:
+            show_error(self.LANGUAGES[self.current_language].get("name_price_required", "Product Name and Price are required."), self.current_language)
             return
             
         try:
             price = float(price)
         except ValueError:
-            show_error("Invalid price format", self.current_language)
+            show_error(self.LANGUAGES[self.current_language].get("invalid_price", "Invalid price. Please enter a number."), self.current_language)
             return
             
-        # Find and update product
+        # Find the product by old_name and update
         for product in self.products:
-            if product['name'] == old_name:
+            if product.get('name', '') == old_name:
                 product['name'] = name
                 product['type'] = type
                 product['flavor'] = flavor
                 product['price'] = price
                 product['status'] = status
+                product['image_path'] = image_path
                 break
         
-        # Save to MongoDB
         save_data("products", self.products)
-        
-        # Close dialog and refresh
+        # Notify RecordSale to refresh its list
+        if self.record_sale_instance:
+            self.record_sale_instance.refresh_products()
+        self.refresh_products()
         dialog.destroy()
-        self.manage_products()
-        show_success(self.LANGUAGES[self.current_language].get("product_updated", "Product updated successfully"), self.current_language)
+        show_success(self.LANGUAGES[self.current_language].get("product_updated_success", "Product updated successfully!"), self.current_language)
 
     def delete_product(self, product):
         """Delete a product"""
-        self.products.remove(product)
-        save_data("products", self.products)
-        self.manage_products()
-        show_success(self.LANGUAGES[self.current_language].get("product_deleted", "Product deleted successfully"), self.current_language)
+        confirm = messagebox.askyesno(
+            self.LANGUAGES[self.current_language].get("confirm_delete", "Confirm Delete"),
+            self.LANGUAGES[self.current_language].get("confirm_delete_product", f"Are you sure you want to delete {product.get('name', 'this product')}?")
+        )
+        if confirm:
+            try:
+                self.products.remove(product)
+                save_data("products", self.products)
+                # Notify RecordSale to refresh its list
+                if self.record_sale_instance:
+                    self.record_sale_instance.refresh_products()
+                self.refresh_products()
+                show_success(self.LANGUAGES[self.current_language].get("product_deleted_success", "Product deleted successfully!"), self.current_language)
+            except ValueError:
+                show_error(self.LANGUAGES[self.current_language].get("product_not_found", "Product not found."), self.current_language)
 
     def refresh_products_list(self):
-        """Refresh the products treeview"""
-        self.products = load_data("products")
-        self.filtered_products = self.products  # Initialize filtered products
-        self.update_products_tree()
+        """Refresh the displayed list of products"""
+        self.manage_products()
 
     def update_products_tree(self):
-        """Update the products treeview with filtered products"""
-        for item in self.products_tree.get_children():
-            self.products_tree.delete(item)
-        for product in self.filtered_products:
-            self.products_tree.insert("", "end", values=(
-                product["Name"],
-                product["Type"],
-                product["Flavor"],
-                product["Quantity"],
-                f"${product['Price']:.2f}"
-            ))
+        """Update the treeview with current product data"""
+        pass
 
     def add_product_dialog(self):
-        """Show dialog to add a new product"""
-        self.add_product_window = ctk.CTkToplevel(self.root)
-        self.add_product_window.title(self.LANGUAGES[self.current_language]["add_product"])
-        self.add_product_window.geometry("400x500")
-        self.add_product_window.configure(fg_color="#1f1f1f")
-
-        title_label = ctk.CTkLabel(self.add_product_window, text=self.LANGUAGES[self.current_language]["add_product"],
-                                   font=ctk.CTkFont(size=16, weight="bold"), text_color="white")
-        title_label.pack(pady=10)
-
-        fields = [
-            ("Name:", "entry"),
-            ("Type:", "combobox", self.HOOKAH_TYPES),
-            ("Flavor:", "combobox", self.HOOKAH_FLAVORS),
-            ("Quantity:", "entry"),
-            ("Price:", "entry"),
-            ("Supplier:", "entry"),
-            ("Last Restock:", "date"),
-            ("Active:", "checkbox")
-        ]
-
-        self.product_entries = []
-        for i, (label, field_type, *options) in enumerate(fields):
-            frame = ctk.CTkFrame(self.add_product_window, fg_color="#1f1f1f")
-            frame.pack(fill='x', padx=20, pady=5)
-
-            label_widget = ctk.CTkLabel(frame, text=label, text_color="white", font=ctk.CTkFont(size=12))
-            label_widget.pack(side='left', padx=5)
-
-            if field_type == "entry":
-                entry = ctk.CTkEntry(frame)
-                entry.pack(side='right', expand=True, fill='x', padx=5)
-            elif field_type == "combobox":
-                entry = ctk.CTkComboBox(frame, values=options[0])
-                entry.pack(side='right', expand=True, fill='x', padx=5)
-            elif field_type == "date":
-                entry = DateEntry(frame, width=12, background='red',
-                                foreground='white', borderwidth=2)
-                entry.pack(side='right', padx=5)
-            elif field_type == "checkbox":
-                entry = ctk.CTkCheckBox(frame)
-                entry.pack(side='right', padx=5)
-
-            self.product_entries.append(entry)
-
-        add_btn = ctk.CTkButton(self.add_product_window, text=self.LANGUAGES[self.current_language]["add_product"],
-                                command=self.save_product)
-        add_btn.pack(pady=20)
+        """Show dialog to add a product (old method?)"""
+        pass
 
     def clear_frame(self):
-        """Clear the current frame"""
+        """Clear the current frame (helper function)"""
         for widget in self.root.winfo_children():
             widget.destroy()
 
     def filter_products(self, *args):
-        """Filter products based on search query"""
-        query = self.search_var.get().lower()
-        if not query:
-            self.filtered_products = self.products
-        else:
-            self.filtered_products = [p for p in self.products if query in p["Name"].lower() or
-                                      query in p["Type"].lower() or
-                                      query in p["Flavor"].lower()]
-        self.update_products_tree()
+        """Filter products based on search and selected category"""
+        pass

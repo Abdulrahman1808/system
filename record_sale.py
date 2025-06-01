@@ -8,6 +8,9 @@ from theme import (
     create_styled_label
 )
 from datetime import datetime
+# Import for image handling
+import os
+from PIL import Image
 
 class RecordSale:
     def __init__(self, root, current_language, languages, back_callback):
@@ -24,9 +27,6 @@ class RecordSale:
         """Refresh the products list from database and update display"""
         import traceback
         try:
-            # Import data from Excel before loading from JSON
-            import_from_excel()
-
             # Load products from database
             all_products = load_data("products") or []
             print(f"[DEBUG] Loaded products count: {len(all_products)}")
@@ -57,9 +57,27 @@ class RecordSale:
                             product_frame = create_styled_frame(self.products_frame, style='card')
                             product_frame.pack(fill='x', padx=10, pady=5)
                             
+                            # Image display
+                            image_path = product.get('image_path')
+                            if image_path and os.path.exists(image_path):
+                                try:
+                                    img = Image.open(image_path)
+                                    img.thumbnail((50, 50)) # Resize for list view
+                                    # Use CTkImage for compatibility with customtkinter
+                                    img_tk = ctk.CTkImage(light_image=img, dark_image=img, size=(50, 50))
+                                    image_label = ctk.CTkLabel(product_frame, image=img_tk, text="")
+                                    image_label.image = img_tk # Keep a reference!
+                                except Exception as e:
+                                    print(f"[ERROR] Could not load product image {image_path}: {e}")
+                                    image_label = create_styled_label(product_frame, text=self.LANGUAGES[self.current_language].get("error_loading_image", "Error loading image"), style='small')
+                            else:
+                                 image_label = create_styled_label(product_frame, text=self.LANGUAGES[self.current_language].get("no_image", "No Image"), style='small')
+
+                            image_label.pack(side='left', padx=10, pady=5) # Pack image to the left
+
                             # Product details
                             details_frame = create_styled_frame(product_frame, style='card')
-                            details_frame.pack(side='left', fill='x', expand=True, padx=10, pady=10)
+                            details_frame.pack(side='left', fill='x', expand=True, padx=(0, 10), pady=10) # Pack details next to image
                             
                             name_label = create_styled_label(
                                 details_frame,

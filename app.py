@@ -6,6 +6,10 @@ from record_sale import RecordSale
 from view_sales_records import ViewSalesRecords
 from manage_suppliers import ManageSuppliers
 from manage_employees import ManageEmployees
+from manage_customers import CustomerManager
+from reporting_analytics import ReportingAnalytics
+from expenses_bills import ExpensesBillsManager
+from notifications_manager import NotificationsManager
 from theme import apply_theme, create_styled_frame, create_styled_label, create_styled_entry, create_styled_button
 from data_handler import load_credentials, import_from_excel
 
@@ -36,7 +40,9 @@ class HookahShopApp:
                 "manage_suppliers": "Manage Suppliers",
                 "manage_employees": "Manage Employees",
                 "settings": "Settings",
-                "logout": "Logout"
+                "logout": "Logout",
+                "manage_customers": "Manage Customers",
+                "reporting_analytics": "Reporting and Analytics"
             }
         }
         
@@ -57,16 +63,24 @@ class HookahShopApp:
             'manage_employees': self.show_employees,
             'settings': self.show_settings,
             'logout': self.logout,
-            'switch_language': self.switch_language
+            'switch_language': self.switch_language,
+            'manage_customers': self.show_customer_manager,
+            'reporting_analytics': self.show_reporting_analytics,
+            'expenses_bills': self.show_expenses_bills,
+            'notifications': self.show_notifications
         }
         
         # Initialize screen managers
-        self.product_manager = ProductManager(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
-        self.inventory_manager = InventoryManager(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
         self.record_sale = RecordSale(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
+        self.product_manager = ProductManager(self.root, self.current_language, self.LANGUAGES, self.show_main_menu, record_sale_instance=self.record_sale)
+        self.inventory_manager = InventoryManager(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
         self.view_sales = ViewSalesRecords(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
         self.manage_suppliers = ManageSuppliers(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
         self.manage_employees = ManageEmployees(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
+        self.customer_manager = CustomerManager(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
+        self.reporting_analytics = ReportingAnalytics(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
+        self.expenses_bills = ExpensesBillsManager(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
+        self.notifications_manager = NotificationsManager(self.root, self.current_language, self.LANGUAGES, self.show_main_menu, self.callbacks)
         self.main_menu = MainMenu(self.root, self.current_language, self.LANGUAGES, self.callbacks)
     
     def show_login(self):
@@ -163,6 +177,22 @@ class HookahShopApp:
     def show_employees(self):
         """Show the employees management screen"""
         self.manage_employees.manage_employees()
+    
+    def show_customer_manager(self):
+        """Show the customer manager screen"""
+        self.customer_manager.manage_customers()
+    
+    def show_reporting_analytics(self):
+        """Show the reporting and analytics screen"""
+        self.reporting_analytics.create_reporting_analytics_interface()
+    
+    def show_expenses_bills(self):
+        """Show the expenses and bills screen"""
+        self.expenses_bills.create_expenses_bills_interface()
+    
+    def show_notifications(self):
+        """Show the notifications and alerts screen"""
+        self.notifications_manager.create_notifications_interface()
     
     def show_settings(self):
         """Show the settings screen"""

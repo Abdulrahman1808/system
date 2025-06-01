@@ -12,6 +12,7 @@ import json
 from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
+import re
 
 # MongoDB Connection Variables
 client = None
@@ -40,17 +41,65 @@ def ensure_collection(collection_name):
 
 def load_data(data_type):
     """Load data from JSON file"""
-    filename = f"{data_type}.json"
-    if os.path.exists(filename):
-        with open(filename, 'r') as f:
-            return json.load(f)
-    return []
+    filename = None
+    if data_type == 'products':
+        filename = "products.json"
+    elif data_type == 'inventory':
+        filename = "inventory.json"
+    elif data_type == 'suppliers':
+        filename = "suppliers.json"
+    elif data_type == 'sales':
+        filename = "sales.json"
+    elif data_type == 'employees':
+        filename = "employees.json"
+    elif data_type == 'customers':
+        filename = "customers.json"
+    elif data_type == 'expenses':
+        filename = "expenses.json"
+    elif data_type == 'bills':
+        filename = "bills.json"
+    else:
+        print(f"[ERROR] Unknown data type: {data_type}")
+        return None
+
+    try:
+        if os.path.exists(filename):
+            with open(filename, 'r') as f:
+                data = json.load(f)
+            print(f"[DEBUG] Loaded {len(data)} items from {filename}")
+            return data
+        else:
+            print(f"[DEBUG] {filename} not found, returning empty list")
+            return []
+    except Exception as e:
+        print(f"[ERROR] Error loading data from {filename}: {str(e)}")
+        return None
 
 def save_data(data_type, data):
     """Save data to both MongoDB and JSON file"""
     try:
+        filename = None
+        if data_type == 'products':
+            filename = "products.json"
+        elif data_type == 'inventory':
+            filename = "inventory.json"
+        elif data_type == 'suppliers':
+            filename = "suppliers.json"
+        elif data_type == 'sales':
+            filename = "sales.json"
+        elif data_type == 'employees':
+            filename = "employees.json"
+        elif data_type == 'customers':
+            filename = "customers.json"
+        elif data_type == 'expenses':
+            filename = "expenses.json"
+        elif data_type == 'bills':
+            filename = "bills.json"
+        else:
+            print(f"[ERROR] Unknown data type for saving: {data_type}")
+            return False
+
         # Save to JSON file
-        filename = f"{data_type}.json"
         with open(filename, 'w') as f:
             json.dump(data, f, indent=4)
         print(f"[DEBUG] Saved {len(data)} items to {filename}")
@@ -64,6 +113,9 @@ def save_data(data_type, data):
             if data:
                 collection.insert_many(data)
             print(f"[DEBUG] Saved {len(data)} items to MongoDB {data_type} collection")
+        
+        # Export to Excel after saving to JSON and MongoDB
+        export_to_excel()
         
         return True
     except Exception as e:
@@ -148,18 +200,49 @@ def get_document(collection_name, document_id):
         return None
 
 def get_next_id(data_type):
-    """Get next available ID for a data type"""
+    """Generate the next available ID for a data type"""
     data = load_data(data_type)
+    if data is None:
+        return "1"
+    
     if not data:
-        return 1
-    # Convert all ids to int safely, ignore non-convertible ids
-    ids = []
+        return "1"
+
+    # Ensure IDs are treated as strings when checking for maximum
+    if data_type == 'sales':
+        # Assuming sales IDs are sequential numbers as strings
+        max_id = 0
+        for item in data:
+            try:
+                # Convert to int for comparison, handle potential non-numeric IDs gracefully
+                item_id = int(item.get('id', 0))
+                if item_id > max_id:
+                    max_id = item_id
+            except ValueError:
+                # Ignore items with non-integer IDs for max calculation
+                pass
+        return str(max_id + 1)
+
+    # For other data types, assume IDs are strings and find the max numeric part
+    # This is a simplified approach, adjust if IDs have different formats
+    max_numeric_id = 0
     for item in data:
-        try:
-            ids.append(int(item.get('id', 0)))
-        except (ValueError, TypeError):
-            ids.append(0)
-    return max(ids) + 1
+        item_id_str = item.get('id', '0')
+        # Try to extract a leading numeric part from the string ID
+        numeric_part_match = re.match(r'^\d+', item_id_str)
+        if numeric_part_match:
+            numeric_part = int(numeric_part_match.group(0))
+            if numeric_part > max_numeric_id:
+                max_numeric_id = numeric_part
+    
+    # If no numeric IDs were found or data is empty, start from 1
+    if max_numeric_id == 0 and data:
+         # If there's data but no numeric IDs were found, return a default or handle as needed
+         # For simplicity, let's still increment from 0 if no numeric part was found in any ID
+         return str(len(data) + 1) # Fallback to count if no parsable IDs
+
+
+    return str(max_numeric_id + 1)
 
 def import_from_excel():
     """Import data from Excel files and merge with existing data"""
