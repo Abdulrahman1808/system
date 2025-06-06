@@ -13,10 +13,16 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
 import re
+import shutil
 
 # MongoDB Connection Variables
 client = None
 db = None
+
+def ensure_data_directories():
+    """Ensure data directories exist"""
+    os.makedirs(EXCEL_DATA_PATH, exist_ok=True)
+    os.makedirs(MONGODB_DATA_PATH, exist_ok=True)
 
 def initialize_db():
     """Initialize MongoDB connection"""
@@ -41,27 +47,11 @@ def ensure_collection(collection_name):
 
 def load_data(data_type):
     """Load data from JSON file"""
-    filename = None
-    if data_type == 'products':
-        filename = "products.json"
-    elif data_type == 'inventory':
-        filename = "inventory.json"
-    elif data_type == 'suppliers':
-        filename = "suppliers.json"
-    elif data_type == 'sales':
-        filename = "sales.json"
-    elif data_type == 'employees':
-        filename = "employees.json"
-    elif data_type == 'customers':
-        filename = "customers.json"
-    elif data_type == 'expenses':
-        filename = "expenses.json"
-    elif data_type == 'bills':
-        filename = "bills.json"
-    else:
+    if data_type not in MONGODB_COLLECTIONS:
         print(f"[ERROR] Unknown data type: {data_type}")
         return None
 
+    filename = os.path.join(MONGODB_DATA_PATH, f"{MONGODB_COLLECTIONS[data_type]}.json")
     try:
         if os.path.exists(filename):
             with open(filename, 'r') as f:
@@ -77,51 +67,76 @@ def load_data(data_type):
 
 def save_data(data_type, data):
     """Save data to both MongoDB and JSON file"""
-    try:
-        filename = None
-        if data_type == 'products':
-            filename = "products.json"
-        elif data_type == 'inventory':
-            filename = "inventory.json"
-        elif data_type == 'suppliers':
-            filename = "suppliers.json"
-        elif data_type == 'sales':
-            filename = "sales.json"
-        elif data_type == 'employees':
-            filename = "employees.json"
-        elif data_type == 'customers':
-            filename = "customers.json"
-        elif data_type == 'expenses':
-            filename = "expenses.json"
-        elif data_type == 'bills':
-            filename = "bills.json"
-        else:
-            print(f"[ERROR] Unknown data type for saving: {data_type}")
-            return False
+    if data_type not in MONGODB_COLLECTIONS:
+        print(f"[ERROR] Unknown data type for saving: {data_type}")
+        return False
 
-        # Save to JSON file
+    try:
+        # Save to JSON file in MongoDB data path
+        filename = os.path.join(MONGODB_DATA_PATH, f"{MONGODB_COLLECTIONS[data_type]}.json")
         with open(filename, 'w') as f:
             json.dump(data, f, indent=4)
         print(f"[DEBUG] Saved {len(data)} items to {filename}")
         
         # Save to MongoDB if connection is available
         if db is not None:
-            collection = db[data_type]
+            collection = db[MONGODB_COLLECTIONS[data_type]]
             # Clear existing data
             collection.delete_many({})
             # Insert new data
             if data:
                 collection.insert_many(data)
-            print(f"[DEBUG] Saved {len(data)} items to MongoDB {data_type} collection")
+            print(f"[DEBUG] Saved {len(data)} items to MongoDB {MONGODB_COLLECTIONS[data_type]} collection")
         
         # Export to Excel after saving to JSON and MongoDB
-        export_to_excel()
+        export_to_excel(data_type)
         
         return True
     except Exception as e:
         print(f"[ERROR] Error saving data: {str(e)}")
         import traceback
         print(f"[TRACEBACK] {traceback.format_exc()}")
+        return False
+
+def export_to_excel(data_type):
+    """Export data to Excel file"""
+    if data_type not in EXCEL_FILES:
+        print(f"[ERROR] Unknown data type for Excel export: {data_type}")
+        return False
+
+    try:
+        data = load_data(data_type)
+        if data is None:
+            return False
+
+        df = pd.DataFrame(data)
+        excel_path = EXCEL_FILES[data_type]
+        df.to_excel(excel_path, index=False)
+        print(f"[DEBUG] Exported data to {excel_path}")
+        return True
+    except Exception as e:
+        print(f"[ERROR] Error exporting to Excel: {str(e)}")
+        return False
+
+def import_from_excel(data_type):
+    """Import data from Excel file"""
+    if data_type not in EXCEL_FILES:
+        print(f"[ERROR] Unknown data type for Excel import: {data_type}")
+        return False
+
+    try:
+        excel_path = EXCEL_FILES[data_type]
+        if not os.path.exists(excel_path):
+            print(f"[DEBUG] Excel file not found: {excel_path}")
+            return False
+
+        df = pd.read_excel(excel_path)
+        data = df.to_dict('records')
+        
+        # Save the imported data
+        return save_data(data_type, data)
+    except Exception as e:
+        print(f"[ERROR] Error importing from Excel: {str(e)}")
         return False
 
 def load_credentials():
@@ -243,144 +258,6 @@ def get_next_id(data_type):
 
 
     return str(max_numeric_id + 1)
-
-def import_from_excel():
-    """Import data from Excel files and merge with existing data"""
-    try:
-        # Import products
-        if os.path.exists('hookah_products.xlsx'):
-            df = pd.read_excel('hookah_products.xlsx')
-            df.columns = df.columns.str.lower()
-            excel_products = df.to_dict('records')
-            existing_products = load_data('products') or []
-            merged_products = merge_data(existing_products, excel_products, 'products')
-            save_data('products', merged_products)
-            print(f"[DEBUG] Imported {len(merged_products)} products")
-
-        # Import inventory
-        if os.path.exists('hookah_inventory.xlsx'):
-            df = pd.read_excel('hookah_inventory.xlsx')
-            df.columns = df.columns.str.lower()
-            excel_inventory = df.to_dict('records')
-            existing_inventory = load_data('inventory') or []
-            merged_inventory = merge_data(existing_inventory, excel_inventory, 'inventory')
-            save_data('inventory', merged_inventory)
-            print(f"[DEBUG] Imported {len(merged_inventory)} inventory items")
-
-        # Import suppliers
-        if os.path.exists('suppliers.xlsx'):
-            df = pd.read_excel('suppliers.xlsx')
-            df.columns = df.columns.str.lower()
-            excel_suppliers = df.to_dict('records')
-            existing_suppliers = load_data('suppliers') or []
-            merged_suppliers = merge_data(existing_suppliers, excel_suppliers, 'suppliers')
-            save_data('suppliers', merged_suppliers)
-            print(f"[DEBUG] Imported {len(merged_suppliers)} suppliers")
-
-        # Import sales
-        if os.path.exists('hookah_sales.xlsx'):
-            df = pd.read_excel('hookah_sales.xlsx')
-            df.columns = df.columns.str.lower()
-            excel_sales = df.to_dict('records')
-            existing_sales = load_data('sales') or []
-            merged_sales = merge_data(existing_sales, excel_sales, 'sales')
-            save_data('sales', merged_sales)
-            print(f"[DEBUG] Imported {len(merged_sales)} sales")
-
-        # Import employees
-        if os.path.exists('hookah_employees.xlsx'):
-            df = pd.read_excel('hookah_employees.xlsx')
-            df.columns = df.columns.str.lower()
-            excel_employees = df.to_dict('records')
-            existing_employees = load_data('employees') or []
-            merged_employees = merge_data(existing_employees, excel_employees, 'employees')
-            save_data('employees', merged_employees)
-            print(f"[DEBUG] Imported {len(merged_employees)} employees")
-
-    except Exception as e:
-        print(f"[ERROR] Error importing data: {str(e)}")
-        import traceback
-        print(f"[TRACEBACK] {traceback.format_exc()}")
-
-def merge_data(existing_data, excel_data, data_type):
-    """Merge Excel data with existing data, handling conflicts"""
-    merged_data = existing_data.copy()
-    for excel_item in excel_data:
-        # Check if item exists by both id and name
-        existing_item = next((item for item in merged_data if item.get('id') == excel_item.get('id') and item.get('name') == excel_item.get('name')), None)
-        if existing_item:
-            # If all fields match, skip
-            if all(existing_item.get(k) == excel_item.get(k) for k in excel_item.keys()):
-                continue
-            # If fields differ, prompt user
-            conflict_fields = [k for k in excel_item.keys() if existing_item.get(k) != excel_item.get(k)]
-            prompt_message = f"Item '{excel_item.get('name')}' exists with different {', '.join(conflict_fields)}. Update existing record?"
-            if messagebox.askyesno("Conflict", prompt_message):
-                existing_item.update(excel_item)
-            else:
-                # Open editing window by default
-                open_edit_window(existing_item, data_type)
-        else:
-            # If no match, add as new
-            merged_data.append(excel_item)
-    return merged_data
-
-def open_edit_window(item, data_type):
-    """Open editing window for the item based on data type"""
-    if data_type == 'products':
-        # Open product editing window
-        # Example: product_manager.edit_product(item)
-        pass
-    elif data_type == 'inventory':
-        # Open inventory editing window
-        # Example: inventory_manager.edit_inventory(item)
-        pass
-    elif data_type == 'employees':
-        # Open employee editing window
-        # Example: manage_employees.edit_employee(item)
-        pass
-    elif data_type == 'suppliers':
-        # Open supplier editing window
-        # Example: manage_suppliers.edit_supplier(item)
-        pass
-    elif data_type == 'sales':
-        # Open sales editing window
-        # Example: record_sale.edit_sale(item)
-        pass
-    else:
-        print(f"[ERROR] Unknown data type: {data_type}")
-
-def export_to_excel():
-    """Export data to Excel files"""
-    # Export products
-    products = load_data('products')
-    if products:
-        df = pd.DataFrame(products)
-        df.to_excel('hookah_products.xlsx', index=False)
-    
-    # Export inventory
-    inventory = load_data('inventory')
-    if inventory:
-        df = pd.DataFrame(inventory)
-        df.to_excel('hookah_inventory.xlsx', index=False)
-    
-    # Export suppliers
-    suppliers = load_data('suppliers')
-    if suppliers:
-        df = pd.DataFrame(suppliers)
-        df.to_excel('suppliers.xlsx', index=False)
-    
-    # Export sales
-    sales = load_data('sales')
-    if sales:
-        df = pd.DataFrame(sales)
-        df.to_excel('hookah_sales.xlsx', index=False)
-        
-    # Export employees
-    employees = load_data('employees')
-    if employees:
-        df = pd.DataFrame(employees)
-        df.to_excel('hookah_employees.xlsx', index=False)
 
 def format_date(date):
     """Format date to string"""

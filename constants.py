@@ -5,7 +5,36 @@ products_file = "hookah_products.xlsx"
 suppliers_file = "suppliers.xlsx"
 employees_file = "hookah_employees.xlsx"
 credentials_file = "hookah_credentials.txt"
-sales_file = "hookah_sales.xlsx"
+sales_journal_file = "sales_journal.xlsx"
+accounts_receivable_file = "accounts_receivable.xlsx"
+accounts_payable_file = "accounts_payable.xlsx"
+
+# Data paths
+EXCEL_DATA_PATH = "excel_data"
+MONGODB_DATA_PATH = "mongodb_data"
+
+# Collection names
+MONGODB_COLLECTIONS = {
+    "products": "products",
+    "inventory": "inventory",
+    "suppliers": "suppliers",
+    "sales_journal": "sales_journal",
+    "accounts_receivable": "accounts_receivable",
+    "accounts_payable": "accounts_payable",
+    "employees": "employees",
+    "customers": "customers"
+}
+
+# Excel file paths
+EXCEL_FILES = {
+    "products": os.path.join(EXCEL_DATA_PATH, "hookah_products.xlsx"),
+    "inventory": os.path.join(EXCEL_DATA_PATH, "hookah_inventory.xlsx"),
+    "suppliers": os.path.join(EXCEL_DATA_PATH, "suppliers.xlsx"),
+    "sales_journal": os.path.join(EXCEL_DATA_PATH, "sales_journal.xlsx"),
+    "accounts_receivable": os.path.join(EXCEL_DATA_PATH, "accounts_receivable.xlsx"),
+    "accounts_payable": os.path.join(EXCEL_DATA_PATH, "accounts_payable.xlsx"),
+    "employees": os.path.join(EXCEL_DATA_PATH, "hookah_employees.xlsx")
+}
 
 # MongoDB configuration
 load_dotenv()
