@@ -2,13 +2,13 @@ import customtkinter as ctk
 from main_menu import MainMenu
 from inventory_manager import InventoryManager
 from product_manager import ProductManager
-from record_sale import RecordSale
-from view_sales_records import ViewSalesRecords
+from accounts_receivable import RecordSale
+from sales_journal import ViewSalesRecords
 from manage_suppliers import ManageSuppliers
 from manage_employees import ManageEmployees
 from manage_customers import CustomerManager
 from reporting_analytics import ReportingAnalytics
-from expenses_bills import ExpensesBillsManager
+from accounts_payable import ExpensesBillsManager
 from notifications_manager import NotificationsManager
 from theme import apply_theme, create_styled_frame, create_styled_label, create_styled_entry, create_styled_button
 from data_handler import load_credentials, import_from_excel

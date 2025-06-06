@@ -20,7 +20,10 @@ class InventoryManager:
         """Refresh the inventory list from database and update display"""
         try:
             # Import data from Excel before loading from JSON
-            import_from_excel()
+            if import_from_excel('inventory'):
+                print("[DEBUG] Successfully imported data from Excel")
+            else:
+                print("[DEBUG] No Excel data to import or import failed")
 
             # Load inventory from database
             self.inventory = load_data("inventory") or []

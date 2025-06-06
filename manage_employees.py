@@ -20,7 +20,10 @@ class ManageEmployees:
         """Refresh the employees list from database and update display"""
         try:
             # Import data from Excel before loading from JSON
-            import_from_excel()
+            if import_from_excel('employees'):
+                print("[DEBUG] Successfully imported data from Excel")
+            else:
+                print("[DEBUG] No Excel data to import or import failed")
 
             # Load employees from database
             self.employees = load_data("employees") or []

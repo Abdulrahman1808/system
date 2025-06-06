@@ -21,7 +21,10 @@ class ViewSalesRecords:
         """Refresh the sales list from database and update display"""
         try:
             # Import data from Excel before loading from JSON
-            import_from_excel()
+            if import_from_excel('sales_journal'):
+                print("[DEBUG] Successfully imported data from Excel")
+            else:
+                print("[DEBUG] No Excel data to import or import failed")
 
             # Load sales from database
             self.sales = load_data("sales") or []
