@@ -192,3 +192,14 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# CMake build files
+CMakeCache.txt
+CMakeFiles/
+uninstall.cmake
+
+# Generated libraries and data
+libs/
+millocare_cpp/
+mongodb_data/
+excel_data/
