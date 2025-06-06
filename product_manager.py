@@ -30,7 +30,10 @@ class ProductManager:
         """Refresh the products list from database and update display"""
         try:
             # Import data from Excel before loading from JSON
-            import_from_excel()
+            if import_from_excel('products'):
+                print("[DEBUG] Successfully imported data from Excel")
+            else:
+                print("[DEBUG] No Excel data to import or import failed")
 
             # Load products from database
             self.products = load_data("products") or []
@@ -173,7 +176,7 @@ class ProductManager:
         # Products list
         for i, product in enumerate(self.products, 1):
             # Product details
-            image_path = product.get('image_path')
+            image_path = str(product.get('image_path', '')) if product.get('image_path') is not None else ''
             if image_path and os.path.exists(image_path):
                 try:
                     img = Image.open(image_path)
@@ -192,56 +195,56 @@ class ProductManager:
 
             name_label = create_styled_label(
                 scrollable_table,
-                text=product.get('name', ''),
+                text=str(product.get('name', '')),
                 style='body'
             )
             name_label.grid(row=i, column=1, padx=10, pady=10, sticky='w') # Shifted to second column
             
             type_label = create_styled_label(
                 scrollable_table,
-                text=product.get('type', ''),
+                text=str(product.get('type', '')),
                 style='body'
             )
-            type_label.grid(row=i, column=2, padx=10, pady=10, sticky='w') # Shifted
+            type_label.grid(row=i, column=2, padx=10, pady=10, sticky='w')
             
             flavor_label = create_styled_label(
                 scrollable_table,
-                text=product.get('flavor', ''),
+                text=str(product.get('flavor', '')),
                 style='body'
             )
-            flavor_label.grid(row=i, column=3, padx=10, pady=10, sticky='w') # Shifted
+            flavor_label.grid(row=i, column=3, padx=10, pady=10, sticky='w')
             
             price_label = create_styled_label(
                 scrollable_table,
-                text=f"${product.get('price', 0):.2f}",
+                text=f"${float(product.get('price', 0) or 0):.2f}",
                 style='body'
             )
-            price_label.grid(row=i, column=4, padx=10, pady=10, sticky='w') # Shifted
+            price_label.grid(row=i, column=4, padx=10, pady=10, sticky='w')
             
             status_label = create_styled_label(
                 scrollable_table,
-                text=product.get('status', 'active'),
+                text=str(product.get('status', 'active')),
                 style='body'
             )
-            status_label.grid(row=i, column=5, padx=10, pady=10, sticky='w') # Shifted
+            status_label.grid(row=i, column=5, padx=10, pady=10, sticky='w')
             
             # Action buttons
             actions_frame = create_styled_frame(scrollable_table, style='card')
-            actions_frame.grid(row=i, column=6, padx=10, pady=10, sticky='w') # Shifted
+            actions_frame.grid(row=i, column=6, padx=10, pady=10, sticky='w')
             
             edit_button = create_styled_button(
                 actions_frame,
                 text=self.LANGUAGES[self.current_language].get("edit", "Edit"),
                 style='outline',
                 width=80,
-                command=lambda p=product: self.edit_product(p['name'])
+                command=lambda p=product: self.edit_product(p)
             )
             edit_button.pack(side='left', padx=5)
             
             delete_button = create_styled_button(
                 actions_frame,
                 text=self.LANGUAGES[self.current_language].get("delete", "Delete"),
-                style='outline',
+                style='error',
                 width=80,
                 command=lambda p=product: self.delete_product(p)
             )

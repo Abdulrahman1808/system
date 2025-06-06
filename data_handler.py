@@ -28,15 +28,29 @@ def initialize_db():
     """Initialize MongoDB connection"""
     global client, db
     try:
+        # Ensure data directories exist
+        ensure_data_directories()
+        
+        # Connect to MongoDB
         client = MongoClient(MONGODB_URI)
         db = client[MONGODB_DB_NAME]
+        
         # Test the connection
         client.server_info()
+        print("[DEBUG] Successfully connected to MongoDB")
+        
+        # Ensure all collections exist
+        for collection_name in MONGODB_COLLECTIONS.values():
+            ensure_collection(collection_name)
+            print(f"[DEBUG] Ensured collection exists: {collection_name}")
+        
         return True
     except errors.ConnectionFailure as e:
+        print(f"[ERROR] Could not connect to MongoDB: {str(e)}")
         show_error(f"Could not connect to MongoDB: {str(e)}")
         return False
     except Exception as e:
+        print(f"[ERROR] Database error: {str(e)}")
         show_error(f"Database error: {str(e)}")
         return False
 
@@ -46,24 +60,74 @@ def ensure_collection(collection_name):
         db.create_collection(collection_name)
 
 def load_data(data_type):
-    """Load data from JSON file"""
+    """Load data from both MongoDB and JSON file with proper synchronization"""
     if data_type not in MONGODB_COLLECTIONS:
         print(f"[ERROR] Unknown data type: {data_type}")
         return None
 
-    filename = os.path.join(MONGODB_DATA_PATH, f"{MONGODB_COLLECTIONS[data_type]}.json")
     try:
-        if os.path.exists(filename):
-            with open(filename, 'r') as f:
-                data = json.load(f)
-            print(f"[DEBUG] Loaded {len(data)} items from {filename}")
+        # Initialize database if not already done
+        if db is None:
+            initialize_db()
+
+        # Ensure collection exists
+        if db is not None:
+            ensure_collection(MONGODB_COLLECTIONS[data_type])
+
+        # Try to load from MongoDB first
+        if db is not None:
+            collection = db[MONGODB_COLLECTIONS[data_type]]
+            data = list(collection.find())
+            # Convert ObjectId to string for JSON serialization
+            for item in data:
+                if '_id' in item:
+                    item['_id'] = str(item['_id'])
+            print(f"[DEBUG] Loaded {len(data)} items from MongoDB")
+            
+            # Save to JSON file for backup
+            filename = os.path.join(MONGODB_DATA_PATH, f"{MONGODB_COLLECTIONS[data_type]}.json")
+            with open(filename, 'w') as f:
+                json.dump(data, f, indent=4)
+            print(f"[DEBUG] Saved {len(data)} items to {filename}")
+            
+            # Export to Excel for consistency
+            export_to_excel(data_type)
+            
             return data
         else:
-            print(f"[DEBUG] {filename} not found, returning empty list")
-            return []
+            # If MongoDB is not available, try to load from JSON
+            filename = os.path.join(MONGODB_DATA_PATH, f"{MONGODB_COLLECTIONS[data_type]}.json")
+            if os.path.exists(filename):
+                with open(filename, 'r') as f:
+                    data = json.load(f)
+                print(f"[DEBUG] Loaded {len(data)} items from {filename}")
+                
+                # Export to Excel for consistency
+                export_to_excel(data_type)
+                
+                return data
+            else:
+                # If JSON doesn't exist, try to load from Excel
+                excel_path = EXCEL_FILES[data_type]
+                if os.path.exists(excel_path):
+                    print(f"[DEBUG] Loading from Excel: {excel_path}")
+                    df = pd.read_excel(excel_path)
+                    data = df.to_dict('records')
+                    
+                    # Save to JSON for future use
+                    with open(filename, 'w') as f:
+                        json.dump(data, f, indent=4)
+                    print(f"[DEBUG] Saved {len(data)} items to {filename}")
+                    
+                    return data
+                else:
+                    print(f"[DEBUG] No data files found, returning empty list")
+                    return []
     except Exception as e:
-        print(f"[ERROR] Error loading data from {filename}: {str(e)}")
-        return None
+        print(f"[ERROR] Error loading data: {str(e)}")
+        import traceback
+        print(f"[TRACEBACK] {traceback.format_exc()}")
+        return []
 
 def save_data(data_type, data):
     """Save data to both MongoDB and JSON file"""
@@ -72,6 +136,17 @@ def save_data(data_type, data):
         return False
 
     try:
+        # Initialize database if not already done
+        if db is None:
+            if not initialize_db():
+                print("[ERROR] Failed to initialize database")
+                return False
+
+        # Ensure collection exists
+        if db is not None:
+            ensure_collection(MONGODB_COLLECTIONS[data_type])
+            print(f"[DEBUG] Ensured collection exists: {MONGODB_COLLECTIONS[data_type]}")
+
         # Save to JSON file in MongoDB data path
         filename = os.path.join(MONGODB_DATA_PATH, f"{MONGODB_COLLECTIONS[data_type]}.json")
         with open(filename, 'w') as f:
@@ -83,13 +158,35 @@ def save_data(data_type, data):
             collection = db[MONGODB_COLLECTIONS[data_type]]
             # Clear existing data
             collection.delete_many({})
+            print(f"[DEBUG] Cleared existing data from {MONGODB_COLLECTIONS[data_type]}")
+            
             # Insert new data
             if data:
-                collection.insert_many(data)
-            print(f"[DEBUG] Saved {len(data)} items to MongoDB {MONGODB_COLLECTIONS[data_type]} collection")
+                # Convert string IDs back to ObjectId for MongoDB
+                for item in data:
+                    if '_id' in item and isinstance(item['_id'], str):
+                        try:
+                            item['_id'] = ObjectId(item['_id'])
+                        except:
+                            # If conversion fails, remove the _id field to let MongoDB generate a new one
+                            del item['_id']
+                
+                # Insert data in batches to avoid memory issues
+                batch_size = 100
+                for i in range(0, len(data), batch_size):
+                    batch = data[i:i + batch_size]
+                    collection.insert_many(batch)
+                    print(f"[DEBUG] Inserted batch of {len(batch)} items")
+                
+                print(f"[DEBUG] Saved {len(data)} items to MongoDB {MONGODB_COLLECTIONS[data_type]} collection")
+            else:
+                print("[DEBUG] No data to save to MongoDB")
         
         # Export to Excel after saving to JSON and MongoDB
-        export_to_excel(data_type)
+        if export_to_excel(data_type):
+            print(f"[DEBUG] Successfully exported data to Excel")
+        else:
+            print(f"[WARNING] Failed to export data to Excel")
         
         return True
     except Exception as e:
@@ -119,24 +216,46 @@ def export_to_excel(data_type):
         return False
 
 def import_from_excel(data_type):
-    """Import data from Excel file"""
+    """Import data from Excel file and sync with database"""
     if data_type not in EXCEL_FILES:
         print(f"[ERROR] Unknown data type for Excel import: {data_type}")
         return False
 
     try:
+        # Initialize database if not already done
+        if db is None:
+            if not initialize_db():
+                print("[ERROR] Failed to initialize database")
+                return False
+
         excel_path = EXCEL_FILES[data_type]
         if not os.path.exists(excel_path):
             print(f"[DEBUG] Excel file not found: {excel_path}")
             return False
 
+        # Read data from Excel
+        print(f"[DEBUG] Reading data from Excel: {excel_path}")
         df = pd.read_excel(excel_path)
         data = df.to_dict('records')
+        print(f"[DEBUG] Read {len(data)} records from Excel")
         
-        # Save the imported data
-        return save_data(data_type, data)
+        # Ensure collection exists
+        if db is not None:
+            ensure_collection(MONGODB_COLLECTIONS[data_type])
+            print(f"[DEBUG] Ensured collection exists: {MONGODB_COLLECTIONS[data_type]}")
+        
+        # Save to both MongoDB and JSON
+        if save_data(data_type, data):
+            print(f"[DEBUG] Successfully imported {len(data)} items from Excel")
+            return True
+        else:
+            print(f"[ERROR] Failed to save imported data")
+            return False
+            
     except Exception as e:
         print(f"[ERROR] Error importing from Excel: {str(e)}")
+        import traceback
+        print(f"[TRACEBACK] {traceback.format_exc()}")
         return False
 
 def load_credentials():
@@ -187,14 +306,32 @@ def update_document(collection_name, document_id, update_data):
         return False
 
 def delete_document(collection_name, document_id):
-    """Delete a document from a collection"""
+    """Delete a document from both MongoDB and JSON file"""
     if db is None:
         show_error("Database connection not available")
         return False
     try:
+        # Delete from MongoDB
         collection = db[collection_name]
         result = collection.delete_one({'_id': ObjectId(document_id)})
-        return result.deleted_count > 0
+        
+        if result.deleted_count > 0:
+            # If deleted from MongoDB, update JSON file
+            data = list(collection.find())
+            # Convert ObjectId to string for JSON serialization
+            for item in data:
+                if '_id' in item:
+                    item['_id'] = str(item['_id'])
+            
+            filename = os.path.join(MONGODB_DATA_PATH, f"{collection_name}.json")
+            with open(filename, 'w') as f:
+                json.dump(data, f, indent=4)
+            
+            # Update Excel file
+            export_to_excel(collection_name)
+            
+            return True
+        return False
     except Exception as e:
         show_error(f"Error deleting document: {str(e)}")
         return False
@@ -215,49 +352,51 @@ def get_document(collection_name, document_id):
         return None
 
 def get_next_id(data_type):
-    """Generate the next available ID for a data type"""
-    data = load_data(data_type)
-    if data is None:
-        return "1"
-    
-    if not data:
-        return "1"
+    """Get the next available ID for a data type"""
+    if data_type not in MONGODB_COLLECTIONS:
+        print(f"[ERROR] Unknown data type for ID generation: {data_type}")
+        return None
 
-    # Ensure IDs are treated as strings when checking for maximum
-    if data_type == 'sales':
-        # Assuming sales IDs are sequential numbers as strings
-        max_id = 0
-        for item in data:
-            try:
-                # Convert to int for comparison, handle potential non-numeric IDs gracefully
-                item_id = int(item.get('id', 0))
-                if item_id > max_id:
-                    max_id = item_id
-            except ValueError:
-                # Ignore items with non-integer IDs for max calculation
-                pass
-        return str(max_id + 1)
+    try:
+        # Initialize database if not already done
+        if db is None:
+            if not initialize_db():
+                print("[ERROR] Failed to initialize database")
+                return None
 
-    # For other data types, assume IDs are strings and find the max numeric part
-    # This is a simplified approach, adjust if IDs have different formats
-    max_numeric_id = 0
-    for item in data:
-        item_id_str = item.get('id', '0')
-        # Try to extract a leading numeric part from the string ID
-        numeric_part_match = re.match(r'^\d+', item_id_str)
-        if numeric_part_match:
-            numeric_part = int(numeric_part_match.group(0))
-            if numeric_part > max_numeric_id:
-                max_numeric_id = numeric_part
-    
-    # If no numeric IDs were found or data is empty, start from 1
-    if max_numeric_id == 0 and data:
-         # If there's data but no numeric IDs were found, return a default or handle as needed
-         # For simplicity, let's still increment from 0 if no numeric part was found in any ID
-         return str(len(data) + 1) # Fallback to count if no parsable IDs
-
-
-    return str(max_numeric_id + 1)
+        # Ensure collection exists
+        if db is not None:
+            ensure_collection(MONGODB_COLLECTIONS[data_type])
+            collection = db[MONGODB_COLLECTIONS[data_type]]
+            
+            # Get all documents
+            documents = list(collection.find())
+            
+            if not documents:
+                # If no documents exist, start with ID 1
+                return 1
+            
+            # Get the highest ID
+            max_id = 0
+            for doc in documents:
+                item_id = doc.get('id')
+                if item_id is not None:
+                    # Convert to string for regex matching
+                    item_id_str = str(item_id)
+                    # Extract numeric part
+                    numeric_part_match = re.match(r'^\d+', item_id_str)
+                    if numeric_part_match:
+                        numeric_id = int(numeric_part_match.group())
+                        max_id = max(max_id, numeric_id)
+            
+            # Return next ID
+            return max_id + 1
+            
+    except Exception as e:
+        print(f"[ERROR] Error generating next ID: {str(e)}")
+        import traceback
+        print(f"[TRACEBACK] {traceback.format_exc()}")
+        return None
 
 def format_date(date):
     """Format date to string"""
@@ -346,21 +485,6 @@ def get_collection(collection_name):
     except Exception as e:
         show_error(f"Error getting collection: {str(e)}")
         return None
-
-def save_data(collection_name, data):
-    """Save data to MongoDB collection"""
-    try:
-        collection = get_collection(collection_name)
-        if collection is not None:
-            # Clear existing data
-            collection.delete_many({})
-            # Insert new data
-            if data:
-                collection.insert_many(data)
-            return True
-    except Exception as e:
-        print(f"Error saving data: {str(e)}")
-    return False
 
 def load_data(collection_name):
     """Load data from MongoDB collection"""
