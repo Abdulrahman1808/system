@@ -5,7 +5,7 @@ from data_handler import load_data, save_data, get_next_id, import_from_excel
 from theme import (
     COLORS, FONTS, create_styled_button,
     create_styled_entry, create_styled_frame,
-    create_styled_label
+    create_styled_label, create_styled_option_menu
 )
 
 class InventoryManager:
@@ -15,6 +15,7 @@ class InventoryManager:
         self.LANGUAGES = languages
         self.back_callback = back_callback
         self.inventory = load_data("inventory") or []
+        self.selected_items = set()
 
     def refresh_inventory(self):
         """Refresh the inventory list from database and update display"""
@@ -99,7 +100,7 @@ class InventoryManager:
             
             label = create_styled_label(
                 card,
-                text=self.LANGUAGES[self.current_language].get(key, default_text),
+                text=self.get_bilingual(key, default_text, default_text),
                 style='subheading'
             )
             label.pack(pady=(10, 5))
@@ -117,24 +118,33 @@ class InventoryManager:
         
         search_entry = create_styled_entry(
             search_frame,
-            placeholder_text=self.LANGUAGES[self.current_language].get("search_inventory", "Search inventory...")
+            placeholder_text=self.get_bilingual("search_inventory", "Search inventory...", "بحث في المخزون")
         )
         search_entry.pack(side='left', padx=20, pady=20, fill='x', expand=True)
         
         filter_button = create_styled_button(
             search_frame,
-            text=self.LANGUAGES[self.current_language].get("filter", "Filter"),
+            text=self.get_bilingual("filter", "Filter", "تصفية"),
             style='outline'
         )
         filter_button.pack(side='right', padx=20, pady=20)
         
         add_button = create_styled_button(
             search_frame,
-            text=self.LANGUAGES[self.current_language].get("add_item", "Add Item"),
+            text=self.get_bilingual("add_item", "Add Item", "إضافة عنصر"),
             style='primary',
             command=self.add_item
         )
         add_button.pack(side='right', padx=20, pady=20)
+        
+        # زر حذف المحدد
+        delete_selected_button = create_styled_button(
+            search_frame,
+            text=self.get_bilingual("delete_selected", "Delete Selected", "حذف المحدد"),
+            style='error',
+            command=self.delete_selected_items
+        )
+        delete_selected_button.pack(side='right', padx=20, pady=20)
         
         # Inventory table (scrollable)
         table_frame = create_styled_frame(main_frame, style='card')
@@ -146,6 +156,7 @@ class InventoryManager:
         
         # Table headers
         headers = [
+            ("select", "Select"),
             ("item_name", "Item Name"),
             ("category", "Category"),
             ("quantity", "Quantity"),
@@ -156,56 +167,65 @@ class InventoryManager:
         for i, (key, default_text) in enumerate(headers):
             header = create_styled_label(
                 scrollable_table,
-                text=self.LANGUAGES[self.current_language].get(key, default_text),
+                text=self.get_bilingual(key, default_text, default_text),
                 style='subheading'
             )
             header.grid(row=0, column=i, padx=10, pady=10, sticky='w')
         
         # Inventory list
         for i, item in enumerate(self.inventory, 1):
-            # Item details
+            # Checkbox لتحديد العنصر
+            var = ctk.BooleanVar()
+            checkbox = ctk.CTkCheckBox(
+                scrollable_table,
+                variable=var,
+                text="",
+                command=lambda v=var, item_id=item.get('id'): self.toggle_select_item(v, item_id)
+            )
+            checkbox.grid(row=i, column=0, padx=10, pady=10)
+            
             name_label = create_styled_label(
                 scrollable_table,
                 text=item.get('name', ''),
                 style='body'
             )
-            name_label.grid(row=i, column=0, padx=10, pady=10, sticky='w')
+            name_label.grid(row=i, column=1, padx=10, pady=10, sticky='w')
             
             category_label = create_styled_label(
                 scrollable_table,
                 text=item.get('category', ''),
                 style='body'
             )
-            category_label.grid(row=i, column=1, padx=10, pady=10, sticky='w')
+            category_label.grid(row=i, column=2, padx=10, pady=10, sticky='w')
             
             quantity_label = create_styled_label(
                 scrollable_table,
                 text=str(item.get('quantity', 0)),
                 style='body'
             )
-            quantity_label.grid(row=i, column=2, padx=10, pady=10, sticky='w')
+            quantity_label.grid(row=i, column=3, padx=10, pady=10, sticky='w')
             
             min_quantity_label = create_styled_label(
                 scrollable_table,
                 text=str(item.get('min_quantity', 0)),
                 style='body'
             )
-            min_quantity_label.grid(row=i, column=3, padx=10, pady=10, sticky='w')
+            min_quantity_label.grid(row=i, column=4, padx=10, pady=10, sticky='w')
             
             location_label = create_styled_label(
                 scrollable_table,
                 text=item.get('location', ''),
                 style='body'
             )
-            location_label.grid(row=i, column=4, padx=10, pady=10, sticky='w')
+            location_label.grid(row=i, column=5, padx=10, pady=10, sticky='w')
             
             # Action buttons
             actions_frame = create_styled_frame(scrollable_table, style='card')
-            actions_frame.grid(row=i, column=5, padx=10, pady=10, sticky='w')
+            actions_frame.grid(row=i, column=6, padx=10, pady=10, sticky='w')
             
             edit_button = create_styled_button(
                 actions_frame,
-                text=self.LANGUAGES[self.current_language].get("edit", "Edit"),
+                text=self.get_bilingual("edit", "Edit", "تعديل"),
                 style='outline',
                 width=80,
                 command=lambda i=item: self.edit_item(i)
@@ -214,7 +234,7 @@ class InventoryManager:
             
             delete_button = create_styled_button(
                 actions_frame,
-                text=self.LANGUAGES[self.current_language].get("delete", "Delete"),
+                text=self.get_bilingual("delete", "Delete", "حذف"),
                 style='outline',
                 width=80,
                 command=lambda i=item: self.delete_item(i)
@@ -225,7 +245,7 @@ class InventoryManager:
         """Add a new inventory item"""
         # Create a new window for adding item
         dialog = ctk.CTkToplevel(self.root)
-        dialog.title(self.LANGUAGES[self.current_language].get("add_item", "Add Item"))
+        dialog.title(self.get_bilingual("add_item", "Add Item", "إضافة عنصر"))
         dialog.geometry("400x500")
         
         # Create scrollable frame for the form content
@@ -239,7 +259,7 @@ class InventoryManager:
         # Name
         name_label = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("item_name", "Item Name"),
+            text=self.get_bilingual("item_name", "Item Name", "اسم العنصر"),
             style='subheading'
         )
         name_label.pack(pady=(20, 5))
@@ -250,7 +270,7 @@ class InventoryManager:
         # Category
         category_label = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("category", "Category"),
+            text=self.get_bilingual("category", "Category", "الفئة"),
             style='subheading'
         )
         category_label.pack(pady=(0, 5))
@@ -261,7 +281,7 @@ class InventoryManager:
         # Quantity
         quantity_label = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("quantity", "Quantity"),
+            text=self.get_bilingual("quantity", "Quantity", "الكمية"),
             style='subheading'
         )
         quantity_label.pack(pady=(0, 5))
@@ -272,7 +292,7 @@ class InventoryManager:
         # Min Quantity
         min_quantity_label = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("min_quantity", "Min Quantity"),
+            text=self.get_bilingual("min_quantity", "Min Quantity", "الكمية الصغرى"),
             style='subheading'
         )
         min_quantity_label.pack(pady=(0, 5))
@@ -283,18 +303,27 @@ class InventoryManager:
         # Location
         location_label = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("location", "Location"),
+            text=self.get_bilingual("location", "Location", "الموقع"),
             style='subheading'
         )
         location_label.pack(pady=(0, 5))
-        
-        location_entry = create_styled_entry(form_frame)
-        location_entry.pack(fill='x', padx=20, pady=(0, 15))
+        import json, os
+        stores_file = os.path.join("excel_data", "stores.json")
+        store_names = ["المحل / Shop"]
+        if os.path.exists(stores_file):
+            with open(stores_file, 'r', encoding='utf-8') as f:
+                stores = json.load(f)
+                store_names += [store['name'] for store in stores]
+        location_menu = create_styled_option_menu(
+            form_frame,
+            values=store_names
+        )
+        location_menu.pack(fill='x', padx=20, pady=(0, 15))
         
         # Save button
         save_button = create_styled_button(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("save", "Save"),
+            text=self.get_bilingual("save", "Save", "حفظ"),
             style='primary',
             command=lambda: self.save_item(
                 dialog,
@@ -302,7 +331,7 @@ class InventoryManager:
                 category_entry.get(),
                 int(quantity_entry.get() or 0),
                 int(min_quantity_entry.get() or 0),
-                location_entry.get()
+                location_menu.get()
             )
         )
         save_button.pack(pady=20)
@@ -311,7 +340,7 @@ class InventoryManager:
         """Edit an existing inventory item"""
         # Create a new window for editing item
         dialog = ctk.CTkToplevel(self.root)
-        dialog.title(self.LANGUAGES[self.current_language].get("edit_item", "Edit Item"))
+        dialog.title(self.get_bilingual("edit_item", "Edit Item", "تعديل العنصر"))
         dialog.geometry("400x500")
         
         # Create scrollable frame for the form content
@@ -325,7 +354,7 @@ class InventoryManager:
         # Name
         name_label = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("item_name", "Item Name"),
+            text=self.get_bilingual("item_name", "Item Name", "اسم العنصر"),
             style='subheading'
         )
         name_label.pack(pady=(20, 5))
@@ -337,7 +366,7 @@ class InventoryManager:
         # Category
         category_label = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("category", "Category"),
+            text=self.get_bilingual("category", "Category", "الفئة"),
             style='subheading'
         )
         category_label.pack(pady=(0, 5))
@@ -349,7 +378,7 @@ class InventoryManager:
         # Quantity
         quantity_label = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("quantity", "Quantity"),
+            text=self.get_bilingual("quantity", "Quantity", "الكمية"),
             style='subheading'
         )
         quantity_label.pack(pady=(0, 5))
@@ -361,7 +390,7 @@ class InventoryManager:
         # Min Quantity
         min_quantity_label = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("min_quantity", "Min Quantity"),
+            text=self.get_bilingual("min_quantity", "Min Quantity", "الكمية الصغرى"),
             style='subheading'
         )
         min_quantity_label.pack(pady=(0, 5))
@@ -373,19 +402,28 @@ class InventoryManager:
         # Location
         location_label = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("location", "Location"),
+            text=self.get_bilingual("location", "Location", "الموقع"),
             style='subheading'
         )
         location_label.pack(pady=(0, 5))
-        
-        location_entry = create_styled_entry(form_frame)
-        location_entry.insert(0, item.get('location', ''))
-        location_entry.pack(fill='x', padx=20, pady=(0, 15))
+        import json, os
+        stores_file = os.path.join("excel_data", "stores.json")
+        store_names = ["المحل / Shop"]
+        if os.path.exists(stores_file):
+            with open(stores_file, 'r', encoding='utf-8') as f:
+                stores = json.load(f)
+                store_names += [store['name'] for store in stores]
+        location_menu = create_styled_option_menu(
+            form_frame,
+            values=store_names
+        )
+        location_menu.set(item.get('location', store_names[0]))
+        location_menu.pack(fill='x', padx=20, pady=(0, 15))
         
         # Save button
         save_button = create_styled_button(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("save", "Save"),
+            text=self.get_bilingual("save", "Save", "حفظ"),
             style='primary',
             command=lambda: self.update_item(
                 dialog,
@@ -394,7 +432,7 @@ class InventoryManager:
                 category_entry.get(),
                 int(quantity_entry.get() or 0),
                 int(min_quantity_entry.get() or 0),
-                location_entry.get()
+                location_menu.get()
             )
         )
         save_button.pack(pady=20)
@@ -402,7 +440,7 @@ class InventoryManager:
         # Cancel button
         cancel_button = create_styled_button(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("cancel", "Cancel"),
+            text=self.get_bilingual("cancel", "Cancel", "إلغاء"),
             style='outline',
             command=dialog.destroy
         )
@@ -411,7 +449,7 @@ class InventoryManager:
     def save_item(self, dialog, name, category, quantity, min_quantity, location):
         """Save a new inventory item"""
         if not name or not category or quantity < 0 or min_quantity < 0:
-            show_error(self.LANGUAGES[self.current_language].get("invalid_item", "Please fill all fields correctly"), self.current_language)
+            show_error(self.get_bilingual("invalid_item", "Please fill all fields correctly", "يرجى ملء جميع الحقون الصحيحة"), self.current_language)
             return
 
         new_item = {
@@ -427,12 +465,12 @@ class InventoryManager:
         save_data("inventory", self.inventory)
         dialog.destroy()
         self.manage_inventory()
-        show_success(self.LANGUAGES[self.current_language].get("item_added", "Item added successfully"), self.current_language)
+        show_success(self.get_bilingual("item_added", "Item added successfully", "تم إضافة العنصر بنجاح"), self.current_language)
 
     def update_item(self, dialog, item, name, category, quantity, min_quantity, location):
         """Update an existing inventory item"""
         if not name or not category or quantity < 0 or min_quantity < 0:
-            show_error(self.LANGUAGES[self.current_language].get("invalid_item", "Please fill all fields correctly"), self.current_language)
+            show_error(self.get_bilingual("invalid_item", "Please fill all fields correctly", "يرجى ملء جميع الحقون الصحيحة"), self.current_language)
             return
 
         item.update({
@@ -446,11 +484,48 @@ class InventoryManager:
         save_data("inventory", self.inventory)
         dialog.destroy()
         self.manage_inventory()
-        show_success(self.LANGUAGES[self.current_language].get("item_updated", "Item updated successfully"), self.current_language)
+        show_success(self.get_bilingual("item_updated", "Item updated successfully", "تم تحديث العنصر بنجاح"), self.current_language)
 
     def delete_item(self, item):
         """Delete an inventory item"""
         self.inventory.remove(item)
         save_data("inventory", self.inventory)
         self.manage_inventory()
-        show_success(self.LANGUAGES[self.current_language].get("item_deleted", "Item deleted successfully"), self.current_language)
+        show_success(self.get_bilingual("item_deleted", "Item deleted successfully", "تم حذف العنصر بنجاح"), self.current_language)
+
+    def get_store_names(self):
+        """Load store names from stores.json file"""
+        import json, os
+        stores_file = os.path.join("excel_data", "stores.json")
+        if not os.path.exists(stores_file):
+            return []
+        with open(stores_file, 'r', encoding='utf-8') as f:
+            stores = json.load(f)
+        return [store['name'] for store in stores]
+
+    def get_bilingual(self, key, default_en, default_ar):
+        en = self.LANGUAGES['en'].get(key, default_en)
+        ar = self.LANGUAGES['ar'].get(key, default_ar)
+        return f"{en} / {ar}"
+
+    def toggle_select_item(self, var, item_id):
+        if var.get():
+            self.selected_items.add(item_id)
+        else:
+            self.selected_items.discard(item_id)
+
+    def delete_selected_items(self):
+        if not self.selected_items:
+            show_error(self.get_bilingual("no_selection", "No items selected", "لم يتم تحديد عناصر"), self.current_language)
+            return
+        confirm = messagebox.askyesno(
+            self.get_bilingual("confirm_delete", "Confirm Delete", "تأكيد الحذف"),
+            self.get_bilingual("delete_selected_confirm", "Are you sure you want to delete the selected items?", "هل أنت متأكد أنك تريد حذف العناصر المحددة؟")
+        )
+        if not confirm:
+            return
+        self.inventory = [item for item in self.inventory if item.get('id') not in self.selected_items]
+        save_data("inventory", self.inventory)
+        self.selected_items.clear()
+        show_success(self.get_bilingual("items_deleted", "Selected items deleted successfully", "تم حذف العناصر المحددة بنجاح"), self.current_language)
+        self.refresh_inventory()

@@ -21,7 +21,7 @@ class BillHandler:
         self.bill_frame = ctk.CTkFrame(self.root, fg_color="#1f1f1f", corner_radius=10)
         self.bill_frame.pack(expand=True, fill='both', padx=20, pady=20)
 
-        title_label = ctk.CTkLabel(self.bill_frame, text=self.LANGUAGES[self.current_language]["bill_section"],
+        title_label = ctk.CTkLabel(self.bill_frame, text=self.get_bilingual("bill_section", "Bill Section", "مقطع الفاتورة"),
                                    font=ctk.CTkFont(size=20, weight="bold"), text_color="white")
         title_label.pack(pady=10)
 
@@ -31,10 +31,10 @@ class BillHandler:
         apply_rtl(self.bill_frame, is_rtl)
 
         self.bill_tree = ttk.Treeview(self.bill_frame, columns=("Product", "Quantity", "Price", "Total"), show="headings")
-        self.bill_tree.heading("Product", text="Product")
-        self.bill_tree.heading("Quantity", text="Quantity")
-        self.bill_tree.heading("Price", text="Price")
-        self.bill_tree.heading("Total", text="Total")
+        self.bill_tree.heading("Product", text=self.get_bilingual("product", "Product", "المنتج"))
+        self.bill_tree.heading("Quantity", text=self.get_bilingual("quantity", "Quantity", "الكمية"))
+        self.bill_tree.heading("Price", text=self.get_bilingual("price", "Price", "السعر"))
+        self.bill_tree.heading("Total", text=self.get_bilingual("total", "Total", "المجموع"))
         self.bill_tree.pack(fill='both', expand=True, pady=10)
 
         total_amount = 0
@@ -50,10 +50,10 @@ class BillHandler:
                                         font=ctk.CTkFont(size=14, weight="bold"), text_color="white")
         self.total_label.pack(pady=10)
 
-        print_btn = ctk.CTkButton(self.bill_frame, text=self.LANGUAGES[self.current_language]["print"], command=self.print_bill)
+        print_btn = ctk.CTkButton(self.bill_frame, text=self.get_bilingual("print", "Print", "طباعة"), command=self.print_bill)
         print_btn.pack(pady=10)
 
-        back_btn = ctk.CTkButton(self.bill_frame, text=self.LANGUAGES[self.current_language]["back"], command=self.create_main_menu)
+        back_btn = ctk.CTkButton(self.bill_frame, text=self.get_bilingual("back", "Back", "رجوع"), command=self.create_main_menu)
         back_btn.pack(pady=10)
 
     def print_bill(self):
@@ -88,3 +88,8 @@ class BillHandler:
         """Clear the current frame"""
         for widget in self.root.winfo_children():
             widget.destroy()
+
+    def get_bilingual(self, key, default_en, default_ar):
+        en = self.LANGUAGES['en'].get(key, default_en)
+        ar = self.LANGUAGES['ar'].get(key, default_ar)
+        return f"{en} / {ar}"

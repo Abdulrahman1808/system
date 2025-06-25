@@ -114,7 +114,22 @@ LANGUAGES = {
         "ai_assistant": "AI Assistant",
         "import_excel": "Import Excel Data",
         "import_success": "Excel data imported successfully",
-        "import_fail": "Failed to import Excel data"
+        "import_fail": "Failed to import Excel data",
+        "payment_method": "Payment Method",
+        "paid_amount": "Paid Amount",
+        "remaining_amount": "Remaining",
+        "cash": "Cash",
+        "credit": "Credit",
+        "partial": "Partial",
+        "entry_updated": "Entry updated successfully",
+        "fill_all_fields": "Please fill all required fields.",
+        "invalid_date_format": "Invalid date format. Please use YYYY-MM-DD",
+        "invalid_amount": "Invalid amount. Please enter a number",
+        "pay_installment": "Pay Installment",
+        "enter_payment": "Enter payment amount",
+        "payment_success": "Payment recorded successfully",
+        "no_due_bills": "No due bills to pay",
+        "pay": "Pay"
     },
     "ar": {
         "title": "نظام إدارة متجر الشيشة",
@@ -183,6 +198,21 @@ LANGUAGES = {
         "ai_assistant": "مساعد الذكاء الاصطناعي",
         "import_excel": "استيراد بيانات إكسل",
         "import_success": "تم استيراد بيانات إكسل بنجاح",
-        "import_fail": "فشل في استيراد بيانات إكسل"
+        "import_fail": "فشل في استيراد بيانات إكسل",
+        "payment_method": "طريقة الدفع / Payment Method",
+        "paid_amount": "المبلغ المدفوع / Paid Amount",
+        "remaining_amount": "المتبقي / Remaining",
+        "cash": "نقدي / Cash",
+        "credit": "آجل / Credit",
+        "partial": "جزئي / Partial",
+        "entry_updated": "تم تحديث السجل بنجاح / Entry updated successfully",
+        "fill_all_fields": "يرجى ملء جميع الحقول المطلوبة / Please fill all required fields.",
+        "invalid_date_format": "تنسيق التاريخ غير صحيح. استخدم YYYY-MM-DD / Invalid date format. Please use YYYY-MM-DD.",
+        "invalid_amount": "قيمة غير صالحة. يرجى إدخال رقم / Invalid amount. Please enter a number.",
+        "pay_installment": "تسديد دفعة / Pay Installment",
+        "enter_payment": "أدخل مبلغ الدفعة / Enter payment amount",
+        "payment_success": "تم تسجيل الدفعة بنجاح / Payment recorded successfully",
+        "no_due_bills": "لا توجد فواتير مستحقة للدفع / No due bills to pay",
+        "pay": "تسديد / Pay"
     }
 }

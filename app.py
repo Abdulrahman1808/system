@@ -43,6 +43,25 @@ class HookahShopApp:
                 "logout": "Logout",
                 "manage_customers": "Manage Customers",
                 "reporting_analytics": "Reporting and Analytics"
+            },
+            "ar": {
+                "login": "تسجيل الدخول",
+                "username": "اسم المستخدم",
+                "password": "كلمة المرور",
+                "submit": "إرسال",
+                "error": "خطأ",
+                "success": "نجاح",
+                "welcome": "مرحباً بك في نظام إدارة متجر الشيشة",
+                "manage_products": "إدارة المنتجات",
+                "manage_inventory": "إدارة المخزون",
+                "record_sale": "تسجيل المبيعات",
+                "view_sales": "إظهار المبيعات",
+                "manage_suppliers": "إدارة الموردين",
+                "manage_employees": "إدارة الموظفين",
+                "settings": "الإعدادات",
+                "logout": "تسجيل خروج",
+                "manage_customers": "إدارة الزبائن",
+                "reporting_analytics": "التقارير والتحليلات"
             }
         }
         
@@ -83,6 +102,11 @@ class HookahShopApp:
         self.notifications_manager = NotificationsManager(self.root, self.current_language, self.LANGUAGES, self.show_main_menu, self.callbacks)
         self.main_menu = MainMenu(self.root, self.current_language, self.LANGUAGES, self.callbacks)
     
+    def get_bilingual(self, key, default_en, default_ar):
+        en = self.LANGUAGES['en'].get(key, default_en)
+        ar = self.LANGUAGES['ar'].get(key, default_ar)
+        return f"{en} / {ar}"
+    
     def show_login(self):
         """Show the login screen"""
         # Clear current frame
@@ -96,7 +120,7 @@ class HookahShopApp:
         # Title Label
         title_label = create_styled_label(
             self.root,
-            text=self.LANGUAGES[self.current_language].get("welcome", "Welcome to Hookah Shop Management System"),
+            text=self.get_bilingual("welcome", "Welcome to Hookah Shop Management System", "مرحباً بك في نظام إدارة متجر الشيشة"),
             style='heading'
         )
         title_label.pack(pady=40)
@@ -108,7 +132,7 @@ class HookahShopApp:
         # Username
         username_label = create_styled_label(
             input_frame,
-            text=self.LANGUAGES[self.current_language].get("username", "Username"),
+            text=self.get_bilingual("username", "Username", "اسم المستخدم"),
             style='body'
         )
         username_label.pack(pady=(0, 5))
@@ -118,7 +142,7 @@ class HookahShopApp:
         # Password
         password_label = create_styled_label(
             input_frame,
-            text=self.LANGUAGES[self.current_language].get("password", "Password"),
+            text=self.get_bilingual("password", "Password", "كلمة المرور"),
             style='body'
         )
         password_label.pack(pady=(0, 5))
@@ -128,7 +152,7 @@ class HookahShopApp:
         # Submit Button
         submit_button = create_styled_button(
             input_frame,
-            text=self.LANGUAGES[self.current_language].get("submit", "Submit"),
+            text=self.get_bilingual("submit", "Submit", "إرسال"),
             style='primary',
             command=lambda: self.process_login(username_entry.get(), password_entry.get())
         )
@@ -141,7 +165,7 @@ class HookahShopApp:
             self.show_main_menu()
         else:
             ctk.messagebox.showerror(
-                self.LANGUAGES[self.current_language]["error"],
+                self.get_bilingual("error", "Error", "خطأ"),
                 "Please enter both username and password"
             )
     

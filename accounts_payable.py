@@ -5,6 +5,7 @@ from theme import create_styled_frame, create_styled_label, create_styled_button
 # Import data handling functions
 from data_handler import load_data, save_data, get_next_id # Import necessary data functions
 from datetime import datetime
+from ui_elements import show_error, show_success
 
 class ExpensesBillsManager:
     def __init__(self, root, current_language, languages, back_callback):
@@ -170,6 +171,10 @@ class ExpensesBillsManager:
             ("description", "Description"),
             ("amount", "Amount"),
             ("category", "Category"),
+            ("supplier_name", "Supplier / المورد"),
+            ("payment_method", "Payment Method / طريقة الدفع"),
+            ("paid_amount", "Paid / المدفوع"),
+            ("remaining", "Remaining / المتبقي"),
             ("type", "Type"), # Expense or Bill
             ("actions", "Actions") # Placeholder for Edit/Delete
         ]
@@ -220,16 +225,44 @@ class ExpensesBillsManager:
             )
             category_label.grid(row=i, column=3, padx=10, pady=5, sticky='w')
 
+            supplier_label = create_styled_label(
+                self.list_scroll_frame,
+                text=entry.get('supplier_name', ''),
+                style='body'
+            )
+            supplier_label.grid(row=i, column=4, padx=10, pady=5, sticky='w')
+
+            payment_method_label = create_styled_label(
+                self.list_scroll_frame,
+                text=self._get_bilingual_payment_method(entry.get('payment_method', '')),
+                style='body'
+            )
+            payment_method_label.grid(row=i, column=5, padx=10, pady=5, sticky='w')
+
+            paid_amount_label = create_styled_label(
+                self.list_scroll_frame,
+                text=entry.get('paid_amount', ''),
+                style='body'
+            )
+            paid_amount_label.grid(row=i, column=6, padx=10, pady=5, sticky='w')
+
+            remaining_label = create_styled_label(
+                self.list_scroll_frame,
+                text=entry.get('remaining', ''),
+                style='body'
+            )
+            remaining_label.grid(row=i, column=7, padx=10, pady=5, sticky='w')
+
             type_label = create_styled_label(
                 self.list_scroll_frame,
                 text=entry.get('type', ''),
                 style='body'
             )
-            type_label.grid(row=i, column=4, padx=10, pady=5, sticky='w')
+            type_label.grid(row=i, column=8, padx=10, pady=5, sticky='w')
 
             # Action buttons (placeholder)
             actions_frame = create_styled_frame(self.list_scroll_frame, style='card')
-            actions_frame.grid(row=i, column=5, padx=10, pady=5, sticky='w')
+            actions_frame.grid(row=i, column=9, padx=10, pady=5, sticky='w')
 
             edit_button = create_styled_button(
                 actions_frame,
@@ -289,14 +322,64 @@ class ExpensesBillsManager:
             ("category", "Category"),
         ]
 
-        self.add_entry_entries = {} # Store entry widgets
-
+        self.add_entry_entries = {}
         for key, text in fields:
             label = create_styled_label(form_frame, text=self.LANGUAGES[self.current_language].get(key, text), style='subheading')
             label.pack(pady=(0, 5), padx=20, anchor='w')
             entry = create_styled_entry(form_frame)
             entry.pack(fill='x', padx=20, pady=(0, 10))
             self.add_entry_entries[key] = entry
+
+        # Payment method (Dropdown)
+        payment_methods = [
+            self.LANGUAGES[self.current_language].get("cash", "Cash / نقدي"),
+            self.LANGUAGES[self.current_language].get("credit", "Credit / آجل"),
+            self.LANGUAGES[self.current_language].get("partial", "Partial / جزئي")
+        ]
+        payment_label = create_styled_label(form_frame, text=self.LANGUAGES[self.current_language].get("payment_method", "Payment Method / طريقة الدفع"), style='subheading')
+        payment_label.pack(pady=(0, 5), padx=20, anchor='w')
+        self.payment_method_menu = ctk.CTkOptionMenu(form_frame, values=payment_methods)
+        self.payment_method_menu.set(payment_methods[0])
+        self.payment_method_menu.pack(fill='x', padx=20, pady=(0, 10))
+        self.payment_method_menu.bind("<<ComboboxSelected>>", lambda e=None: self._toggle_paid_amount_field())
+
+        # Paid amount (only for partial)
+        self.paid_amount_label = create_styled_label(form_frame, text=self.LANGUAGES[self.current_language].get("paid_amount", "Paid Amount / المبلغ المدفوع"), style='subheading')
+        self.paid_amount_entry = create_styled_entry(form_frame)
+        self.paid_amount_label.pack_forget()
+        self.paid_amount_entry.pack_forget()
+
+        # Remaining amount (calculated)
+        self.remaining_label = create_styled_label(form_frame, text=self.LANGUAGES[self.current_language].get("remaining_amount", "Remaining / المتبقي"), style='subheading')
+        self.remaining_value = create_styled_label(form_frame, text="0", style='body')
+        self.remaining_label.pack_forget()
+        self.remaining_value.pack_forget()
+
+        def on_paid_amount_change(event=None):
+            try:
+                total = float(self.add_entry_entries["amount"].get())
+                paid = float(self.paid_amount_entry.get()) if self.paid_amount_entry.get() else 0
+                remaining = max(0, total - paid)
+                self.remaining_value.configure(text=f"{remaining:.2f}")
+            except Exception:
+                self.remaining_value.configure(text="0")
+        self.paid_amount_entry.bind('<KeyRelease>', on_paid_amount_change)
+        self.add_entry_entries["amount"].bind('<KeyRelease>', on_paid_amount_change)
+
+        # --- Supplier Dropdown (for bills only) ---
+        supplier_id = None
+        supplier_name = None
+        self.supplier_menu = None
+        if entry_type == 'bill':
+            suppliers = load_data('suppliers') or []
+            supplier_names = [f"{s.get('name', '')} ({s.get('phone', '')})" for s in suppliers]
+            supplier_ids = [s.get('id', '') for s in suppliers]
+            supplier_label = create_styled_label(form_frame, text=self.LANGUAGES[self.current_language].get("supplier", "Supplier / المورد"), style='subheading')
+            supplier_label.pack(pady=(0, 5), padx=20, anchor='w')
+            self.supplier_menu = ctk.CTkOptionMenu(form_frame, values=supplier_names)
+            if supplier_names:
+                self.supplier_menu.set(supplier_names[0])
+            self.supplier_menu.pack(fill='x', padx=20, pady=(0, 10))
 
         # Save button
         save_button = create_styled_button(
@@ -307,11 +390,53 @@ class ExpensesBillsManager:
         )
         save_button.pack(pady=20)
 
+    def _toggle_paid_amount_field(self):
+        method = self.payment_method_menu.get()
+        partial = self.LANGUAGES[self.current_language].get("partial", "Partial / جزئي")
+        if method == partial:
+            self.paid_amount_label.pack(pady=(0, 5), padx=20, anchor='w')
+            self.paid_amount_entry.pack(fill='x', padx=20, pady=(0, 10))
+            self.remaining_label.pack(pady=(0, 5), padx=20, anchor='w')
+            self.remaining_value.pack(fill='x', padx=20, pady=(0, 10))
+        else:
+            self.paid_amount_label.pack_forget()
+            self.paid_amount_entry.pack_forget()
+            self.remaining_label.pack_forget()
+            self.remaining_value.pack_forget()
+
     def _save_new_entry(self, dialog, entry_type):
         """Save the new expense or bill data"""
-        new_entry_data = {'type': entry_type.capitalize()} # Add type field
+        new_entry_data = {'type': entry_type.capitalize()}
         for key, entry in self.add_entry_entries.items():
             new_entry_data[key] = entry.get().strip()
+        # Payment method
+        new_entry_data['payment_method'] = self.payment_method_menu.get()
+        if new_entry_data['payment_method'] == self.LANGUAGES[self.current_language].get("partial", "Partial / جزئي"):
+            new_entry_data['paid_amount'] = self.paid_amount_entry.get().strip()
+            try:
+                total = float(new_entry_data['amount'])
+                paid = float(new_entry_data['paid_amount']) if new_entry_data['paid_amount'] else 0
+                new_entry_data['remaining'] = max(0, total - paid)
+            except Exception:
+                new_entry_data['remaining'] = new_entry_data['amount']
+        elif new_entry_data['payment_method'] == self.LANGUAGES[self.current_language].get("credit", "Credit / آجل"):
+            new_entry_data['paid_amount'] = "0"
+            new_entry_data['remaining'] = new_entry_data['amount']
+        else:
+            new_entry_data['paid_amount'] = new_entry_data['amount']
+            new_entry_data['remaining'] = "0"
+
+        # Supplier info for bills
+        if entry_type == 'bill' and self.supplier_menu:
+            suppliers = load_data('suppliers') or []
+            supplier_names = [f"{s.get('name', '')} ({s.get('phone', '')})" for s in suppliers]
+            idx = supplier_names.index(self.supplier_menu.get()) if self.supplier_menu.get() in supplier_names else -1
+            if idx >= 0:
+                new_entry_data['supplier_id'] = suppliers[idx].get('id', '')
+                new_entry_data['supplier_name'] = suppliers[idx].get('name', '')
+            else:
+                new_entry_data['supplier_id'] = ''
+                new_entry_data['supplier_name'] = ''
 
         # Basic validation (e.g., date format, amount is numeric)
         if not new_entry_data.get('date') or not new_entry_data.get('description') or not new_entry_data.get('amount'):
@@ -386,15 +511,71 @@ class ExpensesBillsManager:
             ("category", "Category"),
         ]
 
-        self.edit_entry_entries = {} # Store entry widgets
-
+        self.edit_entry_entries = {}
         for key, text in fields:
             label = create_styled_label(form_frame, text=self.LANGUAGES[self.current_language].get(key, text), style='subheading')
             label.pack(pady=(0, 5), padx=20, anchor='w')
             entry_widget = create_styled_entry(form_frame)
-            entry_widget.insert(0, str(entry.get(key, ''))) # Pre-fill with existing data, convert to string
+            entry_widget.insert(0, str(entry.get(key, '')))
             entry_widget.pack(fill='x', padx=20, pady=(0, 10))
             self.edit_entry_entries[key] = entry_widget
+
+        # Payment method (Dropdown)
+        payment_methods = [
+            self.LANGUAGES[self.current_language].get("cash", "Cash / نقدي"),
+            self.LANGUAGES[self.current_language].get("credit", "Credit / آجل"),
+            self.LANGUAGES[self.current_language].get("partial", "Partial / جزئي")
+        ]
+        payment_label = create_styled_label(form_frame, text=self.LANGUAGES[self.current_language].get("payment_method", "Payment Method / طريقة الدفع"), style='subheading')
+        payment_label.pack(pady=(0, 5), padx=20, anchor='w')
+        self.edit_payment_method_menu = ctk.CTkOptionMenu(form_frame, values=payment_methods)
+        self.edit_payment_method_menu.set(entry.get('payment_method', payment_methods[0]))
+        self.edit_payment_method_menu.pack(fill='x', padx=20, pady=(0, 10))
+        self.edit_payment_method_menu.bind("<<ComboboxSelected>>", lambda e=None: self._toggle_edit_paid_amount_field())
+
+        # Paid amount (only for partial)
+        self.edit_paid_amount_label = create_styled_label(form_frame, text=self.LANGUAGES[self.current_language].get("paid_amount", "Paid Amount / المبلغ المدفوع"), style='subheading')
+        self.edit_paid_amount_entry = create_styled_entry(form_frame)
+        self.edit_paid_amount_entry.insert(0, str(entry.get('paid_amount', '')))
+        self.edit_paid_amount_label.pack_forget()
+        self.edit_paid_amount_entry.pack_forget()
+
+        # Remaining amount (calculated)
+        self.edit_remaining_label = create_styled_label(form_frame, text=self.LANGUAGES[self.current_language].get("remaining_amount", "Remaining / المتبقي"), style='subheading')
+        self.edit_remaining_value = create_styled_label(form_frame, text=str(entry.get('remaining', '0')), style='body')
+        self.edit_remaining_label.pack_forget()
+        self.edit_remaining_value.pack_forget()
+
+        def on_edit_paid_amount_change(event=None):
+            try:
+                total = float(self.edit_entry_entries["amount"].get())
+                paid = float(self.edit_paid_amount_entry.get()) if self.edit_paid_amount_entry.get() else 0
+                remaining = max(0, total - paid)
+                self.edit_remaining_value.configure(text=f"{remaining:.2f}")
+            except Exception:
+                self.edit_remaining_value.configure(text="0")
+        self.edit_paid_amount_entry.bind('<KeyRelease>', on_edit_paid_amount_change)
+        self.edit_entry_entries["amount"].bind('<KeyRelease>', on_edit_paid_amount_change)
+
+        # --- Supplier Dropdown (for bills only) ---
+        self.edit_supplier_menu = None
+        if entry_type == 'bill':
+            suppliers = load_data('suppliers') or []
+            supplier_names = [f"{s.get('name', '')} ({s.get('phone', '')})" for s in suppliers]
+            supplier_ids = [s.get('id', '') for s in suppliers]
+            supplier_label = create_styled_label(form_frame, text=self.LANGUAGES[self.current_language].get("supplier", "Supplier / المورد"), style='subheading')
+            supplier_label.pack(pady=(0, 5), padx=20, anchor='w')
+            self.edit_supplier_menu = ctk.CTkOptionMenu(form_frame, values=supplier_names)
+            # Set current value if exists
+            current_supplier = None
+            for s in suppliers:
+                if s.get('id', '') == entry.get('supplier_id', ''):
+                    current_supplier = f"{s.get('name', '')} ({s.get('phone', '')})"
+            if current_supplier and current_supplier in supplier_names:
+                self.edit_supplier_menu.set(current_supplier)
+            elif supplier_names:
+                self.edit_supplier_menu.set(supplier_names[0])
+            self.edit_supplier_menu.pack(fill='x', padx=20, pady=(0, 10))
 
         # Update button
         update_button = create_styled_button(
@@ -414,52 +595,54 @@ class ExpensesBillsManager:
         )
         cancel_button.pack(pady=10)
 
-    def update_entry(self, dialog, original_entry):
-        """Update an existing expense or bill entry"""
-        updated_data = {'type': original_entry.get('type')} # Preserve type
-        for key, entry_widget in self.edit_entry_entries.items():
-            updated_data[key] = entry_widget.get().strip()
-
-        # Basic validation (similar to add)
-        if not updated_data.get('date') or not updated_data.get('description') or not updated_data.get('amount'):
-            show_error(self.LANGUAGES[self.current_language].get("fill_all_fields", "Please fill all required fields."), self.current_language)
-            return
-
-        try:
-            datetime.strptime(updated_data.get('date'), '%Y-%m-%d')
-        except ValueError:
-            show_error(self.LANGUAGES[self.current_language].get("invalid_date_format", "Invalid date format. Please use YYYY-MM-DD."), self.current_language)
-            return
-
-        try:
-            float(updated_data.get('amount'))
-        except ValueError:
-            show_error(self.LANGUAGES[self.current_language].get("invalid_amount", "Invalid amount. Please enter a number."), self.current_language)
-            return
-
-        # Find the entry in the correct list and update
-        entry_type = original_entry.get('type', '').lower()
-        if entry_type == 'expense':
-            data_list = self.expenses
-            success_msg_key = "expense_updated"
-        elif entry_type == 'bill':
-            data_list = self.bills
-            success_msg_key = "bill_updated"
+    def _toggle_edit_paid_amount_field(self):
+        method = self.edit_payment_method_menu.get()
+        partial = self.LANGUAGES[self.current_language].get("partial", "Partial / جزئي")
+        if method == partial:
+            self.edit_paid_amount_label.pack(pady=(0, 5), padx=20, anchor='w')
+            self.edit_paid_amount_entry.pack(fill='x', padx=20, pady=(0, 10))
+            self.edit_remaining_label.pack(pady=(0, 5), padx=20, anchor='w')
+            self.edit_remaining_value.pack(fill='x', padx=20, pady=(0, 10))
         else:
-            show_error("Unknown entry type.", self.current_language)
-            return
+            self.edit_paid_amount_label.pack_forget()
+            self.edit_paid_amount_entry.pack_forget()
+            self.edit_remaining_label.pack_forget()
+            self.edit_remaining_value.pack_forget()
 
-        for i, entry in enumerate(data_list):
-            if entry.get('id') == original_entry.get('id'):
-                data_list[i].update(updated_data)
-                self.save_data()
-                self.display_entries() # Refresh display
-                dialog.destroy()
-                show_success(self.LANGUAGES[self.current_language].get(success_msg_key, f"{original_entry.get('type', '')} updated successfully."), self.current_language)
-                return
-
-        # If we reach here, entry was not found (shouldn't happen if called correctly)
-        show_error(self.LANGUAGES[self.current_language].get("entry_not_found", "Entry not found for update."), self.current_language)
+    def update_entry(self, dialog, original_entry):
+        for key, entry_widget in self.edit_entry_entries.items():
+            original_entry[key] = entry_widget.get().strip()
+        # Payment method
+        original_entry['payment_method'] = self.edit_payment_method_menu.get()
+        if original_entry['payment_method'] == self.LANGUAGES[self.current_language].get("partial", "Partial / جزئي"):
+            original_entry['paid_amount'] = self.edit_paid_amount_entry.get().strip()
+            try:
+                total = float(original_entry['amount'])
+                paid = float(original_entry['paid_amount']) if original_entry['paid_amount'] else 0
+                original_entry['remaining'] = max(0, total - paid)
+            except Exception:
+                original_entry['remaining'] = original_entry['amount']
+        elif original_entry['payment_method'] == self.LANGUAGES[self.current_language].get("credit", "Credit / آجل"):
+            original_entry['paid_amount'] = "0"
+            original_entry['remaining'] = original_entry['amount']
+        else:
+            original_entry['paid_amount'] = original_entry['amount']
+            original_entry['remaining'] = "0"
+        # Supplier info for bills
+        if original_entry.get('type', '').lower() == 'bill' and self.edit_supplier_menu:
+            suppliers = load_data('suppliers') or []
+            supplier_names = [f"{s.get('name', '')} ({s.get('phone', '')})" for s in suppliers]
+            idx = supplier_names.index(self.edit_supplier_menu.get()) if self.edit_supplier_menu.get() in supplier_names else -1
+            if idx >= 0:
+                original_entry['supplier_id'] = suppliers[idx].get('id', '')
+                original_entry['supplier_name'] = suppliers[idx].get('name', '')
+            else:
+                original_entry['supplier_id'] = ''
+                original_entry['supplier_name'] = ''
+        self.save_data()
+        self.display_entries()
+        dialog.destroy()
+        show_success(self.LANGUAGES[self.current_language].get("entry_updated", "Entry updated successfully."), self.current_language)
 
     def delete_entry(self, entry):
         """Delete an expense or bill entry"""
@@ -540,3 +723,15 @@ class ExpensesBillsManager:
         # Re-display the currently filtered list with the new sorting
         # Get the currently filtered list by calling filter_entries without an event
         self.filter_entries() # filter_entries will call display_entries with the correct data 
+
+    def _get_bilingual_payment_method(self, value):
+        if not value:
+            return ""
+        # Return always bilingual
+        if "جزئي" in value or "Partial" in value:
+            return "Partial / جزئي"
+        if "آجل" in value or "Credit" in value:
+            return "Credit / آجل"
+        if "نقدي" in value or "Cash" in value:
+            return "Cash / نقدي"
+        return value 

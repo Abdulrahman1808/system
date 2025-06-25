@@ -50,7 +50,7 @@ class ManageSuppliers:
         
         title_label = create_styled_label(
             title_frame,
-            text=self.LANGUAGES[self.current_language].get("supplier_management", "Supplier Management"),
+            text=self.get_bilingual("supplier_management", "Supplier Management", "إدارة الموردين"),
             style='heading'
         )
         title_label.pack(side='left', padx=20)
@@ -80,7 +80,7 @@ class ManageSuppliers:
             
             label = create_styled_label(
                 card,
-                text=self.LANGUAGES[self.current_language].get(key, default_text),
+                text=self.get_bilingual(key, default_text, default_text),
                 style='subheading'
             )
             label.pack(pady=(20, 5))
@@ -101,14 +101,14 @@ class ManageSuppliers:
         
         search_entry = create_styled_entry(
             search_frame,
-            placeholder_text=self.LANGUAGES[self.current_language].get("search", "Search suppliers..."),
+            placeholder_text=self.get_bilingual("search", "Search suppliers...", "ابحث عن موردين"),
             height=40
         )
         search_entry.pack(side='left', fill='x', expand=True, padx=(0, 10))
         
         filter_btn = create_styled_button(
             search_frame,
-            text=self.LANGUAGES[self.current_language].get("filter", "Filter"),
+            text=self.get_bilingual("filter", "Filter", "تصفية"),
             style='outline',
             width=120,
             height=40,
@@ -119,7 +119,7 @@ class ManageSuppliers:
         # Add new supplier button
         add_btn = create_styled_button(
             search_frame,
-            text=self.LANGUAGES[self.current_language].get("add_supplier", "Add Supplier"),
+            text=self.get_bilingual("add_supplier", "Add Supplier", "إضافة مورد"),
             style='primary',
             width=150,
             height=40,
@@ -149,7 +149,7 @@ class ManageSuppliers:
         for i, (key, default_text) in enumerate(headers):
             header = create_styled_label(
                 scrollable_table,
-                text=self.LANGUAGES[self.current_language].get(key, default_text),
+                text=self.get_bilingual(key, default_text, default_text),
                 style='subheading'
             )
             header.grid(row=0, column=i, padx=10, pady=10, sticky='w')
@@ -201,7 +201,7 @@ class ManageSuppliers:
                 text="Edit",
                 style='outline',
                 width=80,
-                command=lambda s=supplier: self.edit_supplier(s['name'])
+                command=lambda s=supplier: self.edit_supplier(s)
             )
             edit_btn.pack(side='left', padx=5)
             
@@ -229,7 +229,7 @@ class ManageSuppliers:
         # Title
         title_label = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("add_supplier", "Add Supplier"),
+            text=self.get_bilingual("add_supplier", "Add Supplier", "إضافة مورد"),
             style='heading'
         )
         title_label.pack(pady=20)
@@ -237,7 +237,7 @@ class ManageSuppliers:
         # Supplier name
         name_label = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("supplier_name", "Supplier Name"),
+            text=self.get_bilingual("supplier_name", "Supplier Name", "اسم المورد"),
             style='subheading'
         )
         name_label.pack(pady=(0, 5))
@@ -248,7 +248,7 @@ class ManageSuppliers:
         # Contact person
         contact_label = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("contact", "Contact Person"),
+            text=self.get_bilingual("contact", "Contact Person", "الشخص المتصل"),
             style='subheading'
         )
         contact_label.pack(pady=(0, 5))
@@ -259,7 +259,7 @@ class ManageSuppliers:
         # Email
         email_label = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("email", "Email"),
+            text=self.get_bilingual("email", "Email", "البريد الإلكتروني"),
             style='subheading'
         )
         email_label.pack(pady=(0, 5))
@@ -270,7 +270,7 @@ class ManageSuppliers:
         # Phone
         phone_label = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("phone", "Phone"),
+            text=self.get_bilingual("phone", "Phone", "الهاتف"),
             style='subheading'
         )
         phone_label.pack(pady=(0, 5))
@@ -281,7 +281,7 @@ class ManageSuppliers:
         # Status
         status_label = create_styled_label(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("status", "Status"),
+            text=self.get_bilingual("status", "Status", "الحالة"),
             style='subheading'
         )
         status_label.pack(pady=(0, 5))
@@ -295,7 +295,7 @@ class ManageSuppliers:
         # Save button
         save_button = create_styled_button(
             form_frame,
-            text=self.LANGUAGES[self.current_language].get("save", "Save"),
+            text=self.get_bilingual("save", "Save", "حفظ"),
             style='primary',
             command=lambda: self.save_supplier(
                 dialog,
@@ -333,11 +333,11 @@ class ManageSuppliers:
         # Close dialog and refresh
         dialog.destroy()
         self.manage_suppliers()
-        show_success(self.LANGUAGES[self.current_language].get("supplier_added", "Supplier added successfully"), self.current_language)
+        show_success(self.get_bilingual("supplier_added", "Supplier added successfully", "تم إضافة المورد بنجاح"), self.current_language)
 
-    def edit_supplier(self, supplier_name):
+    def edit_supplier(self, supplier):
         """Handle editing a supplier"""
-        # Implement edit functionality
+        # هنا يمكنك فتح نافذة التعديل وملء الحقول من بيانات supplier
         pass
         
     def delete_supplier(self, supplier_name):
@@ -353,7 +353,7 @@ class ManageSuppliers:
         
         # Refresh the view
         self.manage_suppliers()
-        show_success(self.LANGUAGES[self.current_language].get("supplier_deleted", "Supplier deleted successfully"), self.current_language)
+        show_success(self.get_bilingual("supplier_deleted", "Supplier deleted successfully", "تم حذف المورد بنجاح"), self.current_language)
 
     def refresh_suppliers_list(self):
         """Refresh the suppliers treeview"""
@@ -375,13 +375,13 @@ class ManageSuppliers:
     def add_supplier_dialog(self):
         """Show dialog to add a new supplier"""
         self.add_supplier_window = ctk.CTkToplevel(self.root)
-        self.add_supplier_window.title(self.LANGUAGES[self.current_language]["add_supplier"])
+        self.add_supplier_window.title(self.get_bilingual("add_supplier", "Add Supplier", "إضافة مورد"))
         self.add_supplier_window.geometry("500x400")
         self.add_supplier_window.configure(fg_color="#1f1f1f")
 
         title_label = ctk.CTkLabel(
             self.add_supplier_window, 
-            text=self.LANGUAGES[self.current_language]["add_supplier"],
+            text=self.get_bilingual("add_supplier", "Add Supplier", "إضافة مورد"),
             font=ctk.CTkFont(size=20, weight="bold"),
             text_color="white"
         )
@@ -423,7 +423,7 @@ class ManageSuppliers:
 
         save_button = ctk.CTkButton(
             self.add_supplier_window,
-            text=self.LANGUAGES[self.current_language]["save"],
+            text=self.get_bilingual("save", "Save", "حفظ"),
             height=40,
             font=ctk.CTkFont(size=14),
             command=lambda: self.save_supplier(
@@ -441,7 +441,7 @@ class ManageSuppliers:
         """Edit an existing supplier"""
         selected = self.suppliers_tree.selection()
         if not selected:
-            show_error(self.LANGUAGES[self.current_language]["please_fill"], self.current_language)
+            show_error(self.get_bilingual("please_fill", "Please fill all fields", "يرجى ملء جميع الحقون"), self.current_language)
             return
 
         item = self.suppliers_tree.item(selected[0])
@@ -454,15 +454,15 @@ class ManageSuppliers:
                 break
 
         if not supplier:
-            show_error(self.LANGUAGES[self.current_language]["supplier_not_found"], self.current_language)
+            show_error(self.get_bilingual("supplier_not_found", "Supplier not found", "المورد غير موجود"), self.current_language)
             return
 
         self.edit_supplier_window = ctk.CTkToplevel(self.root)
-        self.edit_supplier_window.title(self.LANGUAGES[self.current_language]["edit_supplier"])
+        self.edit_supplier_window.title(self.get_bilingual("edit_supplier", "Edit Supplier", "تعديل المورد"))
         self.edit_supplier_window.geometry("400x300")
         self.edit_supplier_window.configure(fg_color="#1f1f1f")
 
-        title_label = ctk.CTkLabel(self.edit_supplier_window, text=self.LANGUAGES[self.current_language]["edit_supplier"],
+        title_label = ctk.CTkLabel(self.edit_supplier_window, text=self.get_bilingual("edit_supplier", "Edit Supplier", "تعديل المورد"),
                                    font=ctk.CTkFont(size=16, weight="bold"), text_color="white")
         title_label.pack(pady=10)
 
@@ -486,7 +486,7 @@ class ManageSuppliers:
                 entry.pack(side='right', expand=True, fill='x', padx=5)
                 self.edit_entries.append(entry)
 
-        edit_btn = ctk.CTkButton(self.edit_supplier_window, text=self.LANGUAGES[self.current_language]["edit_supplier"],
+        edit_btn = ctk.CTkButton(self.edit_supplier_window, text=self.get_bilingual("edit_supplier", "Edit Supplier", "تعديل المورد"),
                                  command=lambda: self.update_supplier(supplier))
         edit_btn.pack(pady=20)
 
@@ -495,7 +495,7 @@ class ManageSuppliers:
         values = [entry.get().strip() for entry in self.edit_entries]
 
         if not all(values):
-            show_error(self.LANGUAGES[self.current_language]["please_fill"], self.current_language)
+            show_error(self.get_bilingual("please_fill", "Please fill all fields", "يرجى ملء جميع الحقون"), self.current_language)
             return
 
         update_data = {
@@ -508,9 +508,9 @@ class ManageSuppliers:
         if success:
             self.refresh_suppliers_list()
             self.edit_supplier_window.destroy()
-            show_success(self.LANGUAGES[self.current_language]["supplier_updated"], self.current_language)
+            show_success(self.get_bilingual("supplier_updated", "Supplier updated", "تم تحديث المورد بنجاح"), self.current_language)
         else:
-            show_error(self.LANGUAGES[self.current_language]["error"], self.current_language)
+            show_error(self.get_bilingual("error", "Error", "خطأ"), self.current_language)
 
     def clear_frame(self):
         """Clear the current frame"""
@@ -527,3 +527,97 @@ class ManageSuppliers:
                                        query in s.get("Contact", "").lower() or
                                        query in s.get("Email", "").lower()]
         self.update_suppliers_tree()
+
+    def get_bilingual(self, key, default_en, default_ar):
+        en = self.LANGUAGES['en'].get(key, default_en)
+        ar = self.LANGUAGES['ar'].get(key, default_ar)
+        return f"{en} / {ar}"
+
+    def show_supplier_statement(self, supplier):
+        bills = load_data('bills') or []
+        supplier_bills = [b for b in bills if b.get('supplier_id') == supplier.get('id')]
+        dialog = ctk.CTkToplevel(self.root)
+        dialog.title(self.get_bilingual("supplier_statement", "Supplier Statement", "كشف حساب المورد"))
+        dialog.geometry("800x500")
+        dialog.grab_set()
+        frame = create_styled_frame(dialog, style='section')
+        frame.pack(fill='both', expand=True, padx=20, pady=20)
+        title = create_styled_label(frame, text=f"{self.get_bilingual('supplier_statement', 'Supplier Statement', 'كشف حساب المورد')}: {supplier.get('name', '')}", style='heading')
+        title.pack(pady=10)
+        # Table headers
+        headers = [
+            ("date", self.get_bilingual("date", "Date", "التاريخ")),
+            ("id", self.get_bilingual("bill_id", "Bill ID", "رقم الفاتورة")),
+            ("amount", self.get_bilingual("amount", "Amount", "الإجمالي")),
+            ("paid_amount", self.get_bilingual("paid_amount", "Paid", "المدفوع")),
+            ("remaining", self.get_bilingual("remaining_amount", "Remaining", "المتبقي")),
+            ("payment_method", self.get_bilingual("payment_method", "Payment Method", "طريقة الدفع")),
+        ]
+        table = ctk.CTkScrollableFrame(frame, orientation='vertical')
+        table.pack(fill='both', expand=True, pady=10)
+        for i, (_, text) in enumerate(headers):
+            header = create_styled_label(table, text=text, style='subheading')
+            header.grid(row=0, column=i, padx=10, pady=10, sticky='w')
+        for row, bill in enumerate(supplier_bills, 1):
+            for col, (key, _) in enumerate(headers):
+                val = bill.get(key, '')
+                if key == 'amount' or key == 'paid_amount' or key == 'remaining':
+                    try:
+                        val = f"{float(val):.2f}"
+                    except:
+                        pass
+                cell = create_styled_label(table, text=val, style='body')
+                cell.grid(row=row, column=col, padx=10, pady=5, sticky='w')
+        # إجمالي المتبقي
+        total_remaining = sum(float(b.get('remaining', 0) or 0) for b in supplier_bills)
+        total_label = create_styled_label(frame, text=f"{self.get_bilingual('total_remaining', 'Total Remaining', 'إجمالي المتبقي')}: {total_remaining:.2f}", style='heading')
+        total_label.pack(pady=10)
+
+        # زر تسديد دفعة
+        def pay_installment():
+            pay_dialog = ctk.CTkToplevel(dialog)
+            pay_dialog.title(self.get_bilingual('pay_installment', 'Pay Installment', 'تسديد دفعة'))
+            pay_dialog.geometry('350x200')
+            pay_dialog.grab_set()
+            label = create_styled_label(pay_dialog, text=self.get_bilingual('enter_payment', 'Enter payment amount', 'أدخل مبلغ الدفعة'), style='subheading')
+            label.pack(pady=20)
+            amount_entry = create_styled_entry(pay_dialog)
+            amount_entry.pack(fill='x', padx=30, pady=10)
+            def do_payment():
+                try:
+                    amount = float(amount_entry.get())
+                    if amount <= 0:
+                        show_error(self.get_bilingual('invalid_amount', 'Invalid amount', 'قيمة غير صالحة'), self.current_language)
+                        return
+                except:
+                    show_error(self.get_bilingual('invalid_amount', 'Invalid amount', 'قيمة غير صالحة'), self.current_language)
+                    return
+                # تحميل الفواتير من جديد
+                bills = load_data('bills') or []
+                supplier_bills = [b for b in bills if b.get('supplier_id') == supplier.get('id')]
+                # رتب الفواتير حسب التاريخ (الأقدم أولاً)
+                supplier_bills = sorted(supplier_bills, key=lambda b: b.get('date', ''))
+                remaining = amount
+                updated = False
+                for bill in supplier_bills:
+                    bill_remaining = float(bill.get('remaining', 0) or 0)
+                    if bill_remaining > 0:
+                        pay = min(remaining, bill_remaining)
+                        bill['paid_amount'] = str(float(bill.get('paid_amount', 0)) + pay)
+                        bill['remaining'] = str(bill_remaining - pay)
+                        remaining -= pay
+                        updated = True
+                        if remaining <= 0:
+                            break
+                if updated:
+                    save_data('bills', bills)
+                    show_success(self.get_bilingual('payment_success', 'Payment recorded successfully', 'تم تسجيل الدفعة بنجاح'), self.current_language)
+                    pay_dialog.destroy()
+                    dialog.destroy()
+                    self.show_supplier_statement(supplier)
+                else:
+                    show_error(self.get_bilingual('no_due_bills', 'No due bills to pay', 'لا توجد فواتير مستحقة للدفع'), self.current_language)
+            pay_btn = create_styled_button(pay_dialog, text=self.get_bilingual('pay', 'Pay', 'تسديد'), style='primary', command=do_payment)
+            pay_btn.pack(pady=20)
+        pay_btn = create_styled_button(frame, text=self.get_bilingual('pay_installment', 'Pay Installment', 'تسديد دفعة'), style='primary', command=pay_installment)
+        pay_btn.pack(pady=10)

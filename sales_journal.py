@@ -102,7 +102,7 @@ class ViewSalesRecords:
             
             label = create_styled_label(
                 card,
-                text=self.LANGUAGES[self.current_language].get(key, default_text),
+                text=self.get_bilingual(key, default_text, self.LANGUAGES['ar'].get(key, default_text)),
                 style='subheading'
             )
             label.pack(pady=(10, 5))
@@ -120,13 +120,13 @@ class ViewSalesRecords:
         
         search_entry = create_styled_entry(
             search_frame,
-            placeholder_text=self.LANGUAGES[self.current_language].get("search_sales", "Search sales...")
+            placeholder_text=self.get_bilingual("search_sales", "Search sales...", "بحث عن مبيعات")
         )
         search_entry.pack(side='left', padx=20, pady=20, fill='x', expand=True)
         
         filter_button = create_styled_button(
             search_frame,
-            text=self.LANGUAGES[self.current_language].get("filter", "Filter"),
+            text=self.get_bilingual("filter", "Filter", "تصفية"),
             style='outline'
         )
         filter_button.pack(side='right', padx=20, pady=20)
@@ -151,7 +151,7 @@ class ViewSalesRecords:
         for i, (key, default_text) in enumerate(headers):
             header = create_styled_label(
                 scrollable_table,
-                text=self.LANGUAGES[self.current_language].get(key, default_text),
+                text=self.get_bilingual(key, default_text, self.LANGUAGES['ar'].get(key, default_text)),
                 style='subheading'
             )
             header.grid(row=0, column=i, padx=10, pady=10, sticky='w')
@@ -198,7 +198,7 @@ class ViewSalesRecords:
             
             view_button = create_styled_button(
                 actions_frame,
-                text=self.LANGUAGES[self.current_language].get("view", "View"),
+                text=self.get_bilingual("view", "View", "إظهار"),
                 style='outline',
                 width=80,
                 command=lambda s=sale: self.view_sale_details(s)
@@ -207,7 +207,7 @@ class ViewSalesRecords:
             
             print_button = create_styled_button(
                 actions_frame,
-                text=self.LANGUAGES[self.current_language].get("print", "Print"),
+                text=self.get_bilingual("print", "Print", "طباعة"),
                 style='outline',
                 width=80,
                 command=lambda s=sale: self.print_sale(s)
@@ -218,7 +218,7 @@ class ViewSalesRecords:
         """View detailed information about a sale"""
         # Create a new window for sale details
         dialog = ctk.CTkToplevel(self.root)
-        dialog.title(self.LANGUAGES[self.current_language].get("sale_details", "Sale Details"))
+        dialog.title(self.get_bilingual("sale_details", "Sale Details", "تفاصيل المبيعة"))
         dialog.geometry("600x400")
         
         # Sale details
@@ -258,7 +258,7 @@ class ViewSalesRecords:
         for i, (key, default_text) in enumerate(headers):
             header = create_styled_label(
                 items_frame,
-                text=self.LANGUAGES[self.current_language].get(key, default_text),
+                text=self.get_bilingual(key, default_text, self.LANGUAGES['ar'].get(key, default_text)),
                 style='subheading'
             )
             header.grid(row=0, column=i, padx=10, pady=10, sticky='w')
@@ -303,7 +303,7 @@ class ViewSalesRecords:
         
         total_label = create_styled_label(
             total_frame,
-            text=self.LANGUAGES[self.current_language].get("total", "Total:"),
+            text=self.get_bilingual("total", "Total:", "المجموع"),
             style='subheading'
         )
         total_label.pack(side='left', padx=20, pady=20)
@@ -318,4 +318,7 @@ class ViewSalesRecords:
     def print_sale(self, sale):
         """Print a sale record"""
         # Implement printing functionality
-        show_success(self.LANGUAGES[self.current_language].get("printing", "Printing sale record..."), self.current_language)
+        show_success(self.get_bilingual("printing", "Printing sale record...", "طباعة سجل المبيعة"), self.current_language)
+
+    def get_bilingual(self, key, default_en, default_ar):
+        en = self.LANGUAGES['en'].get(key, default_en)

@@ -229,21 +229,30 @@ def import_from_excel(data_type):
                 return False
 
         excel_path = EXCEL_FILES[data_type]
+        required_cols = []
+        if data_type == 'products':
+            required_cols = ['name', 'type', 'flavor', 'quantity', 'sale_type', 'price', 'status', 'image_path', 'barcode']
+        # إذا لم يوجد ملف الإكسيل أنشئه بالأعمدة المطلوبة
         if not os.path.exists(excel_path):
-            print(f"[DEBUG] Excel file not found: {excel_path}")
-            return False
-
-        # Read data from Excel
-        print(f"[DEBUG] Reading data from Excel: {excel_path}")
+            print(f"[DEBUG] Excel file not found: {excel_path}, creating new one.")
+            df = pd.DataFrame(columns=required_cols)
+            df.to_excel(excel_path, index=False)
+        # اقرأ البيانات
         df = pd.read_excel(excel_path)
+        # إذا كان هناك أعمدة ناقصة أضفها
+        if data_type == 'products':
+            missing = [col for col in required_cols if col not in df.columns]
+            if missing:
+                for col in missing:
+                    df[col] = '' if col not in ['quantity', 'price'] else 0
+                df.to_excel(excel_path, index=False)
+                print(f"[DEBUG] Added missing columns to Excel: {missing}")
         data = df.to_dict('records')
         print(f"[DEBUG] Read {len(data)} records from Excel")
-        
         # Ensure collection exists
         if db is not None:
             ensure_collection(MONGODB_COLLECTIONS[data_type])
             print(f"[DEBUG] Ensured collection exists: {MONGODB_COLLECTIONS[data_type]}")
-        
         # Save to both MongoDB and JSON
         if save_data(data_type, data):
             print(f"[DEBUG] Successfully imported {len(data)} items from Excel")
@@ -251,7 +260,6 @@ def import_from_excel(data_type):
         else:
             print(f"[ERROR] Failed to save imported data")
             return False
-            
     except Exception as e:
         print(f"[ERROR] Error importing from Excel: {str(e)}")
         import traceback

@@ -215,6 +215,23 @@ class RecordSale:
         left_frame = create_styled_frame(content_frame, style='card')
         left_frame.pack(side='left', fill='both', expand=True, padx=(0, 10), pady=20)
         
+        # Barcode entry section
+        barcode_frame = create_styled_frame(left_frame, style='card')
+        barcode_frame.pack(fill='x', padx=20, pady=(0, 10))
+        barcode_label_text = ("Barcode / باركود" if self.current_language == 'en' else "باركود / Barcode")
+        barcode_label = create_styled_label(
+            barcode_frame,
+            text=barcode_label_text,
+            style='body'
+        )
+        barcode_label.pack(side='left', padx=10, pady=10)
+        self.barcode_entry = create_styled_entry(
+            barcode_frame,
+            placeholder_text=barcode_label_text
+        )
+        self.barcode_entry.pack(side='left', padx=10, pady=10, fill='x', expand=True)
+        self.barcode_entry.bind('<Return>', self.handle_barcode_entry)
+        
         # Search section
         search_frame = create_styled_frame(left_frame, style='card')
         search_frame.pack(fill='x', padx=20, pady=(0, 20))
@@ -370,3 +387,21 @@ class RecordSale:
 
         except Exception as e:
             show_error(f"Error processing checkout: {str(e)}", self.current_language)
+
+    def handle_barcode_entry(self, event=None):
+        """Handle barcode entry and add product to cart if found"""
+        barcode = self.barcode_entry.get().strip()
+        if not barcode:
+            return
+        # ابحث عن المنتج بالباركود
+        found_product = None
+        for product in self.products:
+            if str(product.get('barcode', '')).strip() == barcode:
+                found_product = product
+                break
+        if found_product:
+            self.add_to_cart(found_product)
+            self.barcode_entry.delete(0, 'end')
+        else:
+            show_error(self.LANGUAGES[self.current_language].get("product_not_found", "Product not found"), self.current_language)
+            self.barcode_entry.delete(0, 'end')

@@ -154,6 +154,11 @@ class ReportingAnalytics:
         )
         self.top_selling_report_text.pack(pady=5, fill='both', expand=True)
 
+    def get_bilingual(self, key, default_en, default_ar):
+        en = self.LANGUAGES['en'].get(key, default_en)
+        ar = self.LANGUAGES['ar'].get(key, default_ar)
+        return f"{en} / {ar}"
+
     def generate_sales_summary_report(self):
         """Generates and displays a comprehensive sales summary report."""
         total_sales = 0
@@ -180,15 +185,15 @@ class ReportingAnalytics:
         # Calculate average sale value
         avg_sale = total_sales / len(self.sales_data) if self.sales_data else 0
 
-        report_text = f"{self.LANGUAGES[self.current_language].get('total_sales', 'Total Sales')}: ${total_sales:.2f}\n"
-        report_text += f"{self.LANGUAGES[self.current_language].get('total_items_sold', 'Total Items Sold')}: {total_items_sold}\n"
-        report_text += f"{self.LANGUAGES[self.current_language].get('average_sale', 'Average Sale Value')}: ${avg_sale:.2f}\n\n"
+        report_text = f"{self.get_bilingual('total_sales', 'Total Sales', 'المبيعات الكلية')}: ${total_sales:.2f}\n"
+        report_text += f"{self.get_bilingual('total_items_sold', 'Total Items Sold', 'عدد الصنف المباع')}: {total_items_sold}\n"
+        report_text += f"{self.get_bilingual('average_sale', 'Average Sale Value', 'متوسط قيمة المبيعات')}: ${avg_sale:.2f}\n\n"
         
-        report_text += f"{self.LANGUAGES[self.current_language].get('sales_by_category', 'Sales by Category')}:\n"
+        report_text += f"{self.get_bilingual('sales_by_category', 'Sales by Category', 'المبيعات بالفئة')}:\n"
         for category, amount in sorted(sales_by_category.items(), key=lambda x: x[1], reverse=True):
             report_text += f"{category}: ${amount:.2f}\n"
 
-        report_text += f"\n{self.LANGUAGES[self.current_language].get('sales_by_employee', 'Sales by Employee')}:\n"
+        report_text += f"\n{self.get_bilingual('sales_by_employee', 'Sales by Employee', 'المبيعات بالموظف')}:\n"
         for employee, amount in sorted(sales_by_employee.items(), key=lambda x: x[1], reverse=True):
             report_text += f"{employee}: ${amount:.2f}\n"
 
@@ -222,22 +227,20 @@ class ReportingAnalytics:
             except (ValueError, TypeError):
                 continue
 
-        report_text = f"{self.LANGUAGES[self.current_language].get('total_items', 'Total Items in Inventory')}: {total_items}\n"
-        report_text += f"{self.LANGUAGES[self.current_language].get('total_value', 'Total Inventory Value')}: ${total_value:.2f}\n\n"
+        report_text = f"{self.get_bilingual('total_items', 'Total Items in Inventory', 'عدد الصنف في المخزن')}: {total_items}\n"
+        report_text += f"{self.get_bilingual('total_value', 'Total Inventory Value', 'قيمة المخزن الكلية')}: ${total_value:.2f}\n\n"
         
-        report_text += f"{self.LANGUAGES[self.current_language].get('inventory_by_category', 'Inventory by Category')}:\n"
+        report_text += f"{self.get_bilingual('inventory_by_category', 'Inventory by Category', 'المخزن بالفئة')}:\n"
         for category, data in sorted(category_summary.items()):
             report_text += f"{category}: {data['count']} items (${data['value']:.2f})\n"
 
         if low_stock_items:
-            report_text += f"\n{self.LANGUAGES[self.current_language].get('low_stock_items', 'Low Stock Items')} (below {self.low_stock_threshold}):\n"
-            report_text += ", ".join(low_stock_items)
+            report_text += f"\n{self.get_bilingual('low_stock_items', 'Low Stock Items', 'الصنف أقل من المخزن')}: {', '.join(low_stock_items)}"
         else:
-            report_text += f"\n{self.LANGUAGES[self.current_language].get('no_low_stock', 'No items below the low stock threshold of')} {self.low_stock_threshold}."
+            report_text += f"\n{self.get_bilingual('no_low_stock', 'No items below the low stock threshold of', 'لا توجد أصناف أقل من المخزن')}: {self.low_stock_threshold}."
 
         if out_of_stock_items:
-            report_text += f"\n\n{self.LANGUAGES[self.current_language].get('out_of_stock_items', 'Out of Stock Items')}:\n"
-            report_text += ", ".join(out_of_stock_items)
+            report_text += f"\n\n{self.get_bilingual('out_of_stock_items', 'Out of Stock Items', 'أصناف خارج المخزن')}: {', '.join(out_of_stock_items)}"
 
         self.inventory_report_results_label.configure(text=report_text)
 
@@ -269,13 +272,13 @@ class ReportingAnalytics:
             else:
                 customers_by_category['occasional'] += 1
 
-        report_text = f"{self.LANGUAGES[self.current_language].get('total_customers', 'Total Number of Customers')}: {total_customers}\n"
-        report_text += f"{self.LANGUAGES[self.current_language].get('total_purchases', 'Total Purchases')}: {total_purchases}\n\n"
+        report_text = f"{self.get_bilingual('total_customers', 'Total Number of Customers', 'عدد الزبائن الكلي')}: {total_customers}\n"
+        report_text += f"{self.get_bilingual('total_purchases', 'Total Purchases', 'عدد المشتريات الكلية')}: {total_purchases}\n\n"
         
-        report_text += f"{self.LANGUAGES[self.current_language].get('customer_categories', 'Customer Categories')}:\n"
-        report_text += f"{self.LANGUAGES[self.current_language].get('frequent_customers', 'Frequent Customers')}: {customers_by_category['frequent']}\n"
-        report_text += f"{self.LANGUAGES[self.current_language].get('regular_customers', 'Regular Customers')}: {customers_by_category['regular']}\n"
-        report_text += f"{self.LANGUAGES[self.current_language].get('occasional_customers', 'Occasional Customers')}: {customers_by_category['occasional']}\n"
+        report_text += f"{self.get_bilingual('customer_categories', 'Customer Categories', 'فئات الزبائن')}:\n"
+        report_text += f"{self.get_bilingual('frequent_customers', 'Frequent Customers', 'الزبائن المستمرين')}: {customers_by_category['frequent']}\n"
+        report_text += f"{self.get_bilingual('regular_customers', 'Regular Customers', 'الزبائن المنتظمين')}: {customers_by_category['regular']}\n"
+        report_text += f"{self.get_bilingual('occasional_customers', 'Occasional Customers', 'الزبائن المنتظمين')}: {customers_by_category['occasional']}\n"
 
         self.customer_report_results_label.configure(text=report_text)
 
@@ -319,12 +322,12 @@ class ReportingAnalytics:
         else:
             daily_growth = 0
 
-        report_lines = [f"{self.LANGUAGES[self.current_language].get('sales_by_date', 'Sales by Date')}:"]
+        report_lines = [f"{self.get_bilingual('sales_by_date', 'Sales by Date', 'المبيعات بالتاريخ')}:"]
         for date in dates:
             report_lines.append(f"{date}: ${sales_by_date[date]:.2f} ({daily_items[date]} items)")
 
         if daily_growth != 0:
-            report_lines.append(f"\n{self.LANGUAGES[self.current_language].get('daily_growth', 'Average Daily Growth')}: ${daily_growth:.2f}")
+            report_lines.append(f"\n{self.get_bilingual('daily_growth', 'Average Daily Growth', 'متوسط النمو اليومي')}: ${daily_growth:.2f}")
 
         report_text = "\n".join(report_lines)
 
@@ -360,17 +363,17 @@ class ReportingAnalytics:
             reverse=True
         )
 
-        report_lines = [f"{self.LANGUAGES[self.current_language].get('top_selling_products', 'Top Selling Products')}:"]
+        report_lines = [f"{self.get_bilingual('top_selling_products', 'Top Selling Products', 'المبيعات الأعلى')}:"]
         
         for name, data in sorted_products:
             days_sold = len(data['dates'])
             avg_daily_sales = data['quantity'] / days_sold if days_sold > 0 else 0
             
             report_lines.append(f"\n{name}:")
-            report_lines.append(f"  {self.LANGUAGES[self.current_language].get('total_quantity', 'Total Quantity')}: {data['quantity']}")
-            report_lines.append(f"  {self.LANGUAGES[self.current_language].get('total_revenue', 'Total Revenue')}: ${data['revenue']:.2f}")
-            report_lines.append(f"  {self.LANGUAGES[self.current_language].get('days_sold', 'Days Sold')}: {days_sold}")
-            report_lines.append(f"  {self.LANGUAGES[self.current_language].get('avg_daily_sales', 'Average Daily Sales')}: {avg_daily_sales:.1f}")
+            report_lines.append(f"  {self.get_bilingual('total_quantity', 'Total Quantity', 'الكمية الكلية')}: {data['quantity']}")
+            report_lines.append(f"  {self.get_bilingual('total_revenue', 'Total Revenue', 'الإيرادات الكلية')}: ${data['revenue']:.2f}")
+            report_lines.append(f"  {self.get_bilingual('days_sold', 'Days Sold', 'عدد الأيام')}: {days_sold}")
+            report_lines.append(f"  {self.get_bilingual('avg_daily_sales', 'Average Daily Sales', 'متوسط المبيعات اليومية')}: {avg_daily_sales:.1f}")
 
         report_text = "\n".join(report_lines)
 

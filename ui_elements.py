@@ -44,27 +44,29 @@ def show_success(message, title="Success"):
     messagebox.showinfo(title, message)
 
 class AuthScreens:
-    def __init__(self, root, current_language, languages, login_callback, switch_language_callback):
+    def __init__(self, root, languages, login_callback):
         self.root = root
-        self.current_language = current_language
         self.LANGUAGES = languages
         self.login = login_callback
-        self.switch_language = switch_language_callback
-        
+
+    def get_bilingual(self, key, default_en, default_ar):
+        en = self.LANGUAGES['en'].get(key, default_en)
+        ar = self.LANGUAGES['ar'].get(key, default_ar)
+        return f"{en} / {ar}"
+
     def create_login_screen(self):
         """Create the login screen"""
         self.clear_frame()
         self.login_frame = tk.Frame(self.root, bg='white', padx=30, pady=30)
         self.login_frame.place(relx=0.5, rely=0.5, anchor='center')
         
-        # Make sure to use current language for all labels
         tk.Label(self.login_frame, 
-                text=self.LANGUAGES[self.current_language]["hookah_heaven"], 
+                text=self.get_bilingual("hookah_heaven", "Hookah Heaven", "جنة الشيشة"), 
                 bg='white', fg='red', font=("Arial", 24, "bold")
                 ).grid(row=0, column=0, columnspan=2, pady=20)
                 
         tk.Label(self.login_frame, 
-                text=self.LANGUAGES[self.current_language]["username"], 
+                text=self.get_bilingual("username", "Username", "اسم المستخدم"), 
                 bg='white', fg='red', font=("Arial", 14)
                 ).grid(row=1, column=0, padx=10, pady=10, sticky='e')
                 
@@ -73,7 +75,7 @@ class AuthScreens:
         self.username_entry.grid(row=1, column=1, padx=10, pady=10)
         
         tk.Label(self.login_frame, 
-                text=self.LANGUAGES[self.current_language]["password"], 
+                text=self.get_bilingual("password", "Password", "كلمة المرور"), 
                 bg='white', fg='red', font=("Arial", 14)
                 ).grid(row=2, column=0, padx=10, pady=10, sticky='e')
                 
@@ -82,18 +84,9 @@ class AuthScreens:
         self.password_entry.grid(row=2, column=1, padx=10, pady=10)
         
         login_btn = ttk.Button(self.login_frame, 
-                             text=self.LANGUAGES[self.current_language]["login"], 
+                             text=self.get_bilingual("login", "Login", "تسجيل الدخول"), 
                              command=self.process_login)
         login_btn.grid(row=3, columnspan=2, pady=20)
-        
-        lang_frame = tk.Frame(self.login_frame, bg='white')
-        lang_frame.grid(row=4, columnspan=2, pady=10)
-        
-        # Language buttons
-        ttk.Button(lang_frame, text="English", 
-                  command=lambda: self.switch_language("en")).pack(side='left', padx=5)
-        ttk.Button(lang_frame, text="العربية", 
-                  command=lambda: self.switch_language("ar")).pack(side='left', padx=5)
     
     def process_login(self):
         """Process login credentials"""

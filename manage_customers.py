@@ -161,7 +161,7 @@ class CustomerManager:
         for i, (key, default_text) in enumerate(headers):
             header = create_styled_label(
                 self.scrollable_customer_list,
-                text=self.LANGUAGES[self.current_language].get(key, default_text),
+                text=self.get_bilingual(key, default_text, default_text),
                 style='subheading'
             )
             header.grid(row=0, column=i, padx=10, pady=10, sticky='w')
@@ -281,7 +281,7 @@ class CustomerManager:
         self.add_customer_entries = {} # Store entry widgets
 
         for key, text in fields:
-            label = create_styled_label(form_frame, text=self.LANGUAGES[self.current_language].get(key, text), style='subheading')
+            label = create_styled_label(form_frame, text=self.get_bilingual(key, text, text), style='subheading')
             label.pack(pady=(0, 5), padx=20, anchor='w')
             entry = create_styled_entry(form_frame)
             entry.pack(fill='x', padx=20, pady=(0, 15))
@@ -360,7 +360,7 @@ class CustomerManager:
         self.edit_customer_entries = {} # Store entry widgets
 
         for key, text in fields:
-            label = create_styled_label(form_frame, text=self.LANGUAGES[self.current_language].get(key, text), style='subheading')
+            label = create_styled_label(form_frame, text=self.get_bilingual(key, text, text), style='subheading')
             label.pack(pady=(0, 5), padx=20, anchor='w')
             entry = create_styled_entry(form_frame)
             entry.insert(0, customer.get(key, '')) # Pre-fill with existing data
@@ -483,4 +483,9 @@ class CustomerManager:
             self.sort_order = 'asc'
 
         # Re-display the customers with the new sorting
-        self.display_customers(self.customers) # Pass the full list to be sorted and displayed 
+        self.display_customers(self.customers) # Pass the full list to be sorted and displayed
+
+    def get_bilingual(self, key, default_en, default_ar):
+        en = self.LANGUAGES['en'].get(key, default_en)
+        ar = self.LANGUAGES['ar'].get(key, default_ar)
+        return f"{en} / {ar}" 

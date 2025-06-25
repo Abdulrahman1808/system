@@ -8,13 +8,16 @@ from theme import (
 )
 
 class AuthScreens:
-    def __init__(self, root, current_language, languages, login_callback, switch_language_callback):
+    def __init__(self, root, languages, login_callback):
         self.root = root
-        self.current_language = current_language
         self.LANGUAGES = languages
         self.login_callback = login_callback
-        self.switch_language = switch_language_callback
-        
+
+    def get_bilingual(self, key, default_en, default_ar):
+        en = self.LANGUAGES['en'].get(key, default_en)
+        ar = self.LANGUAGES['ar'].get(key, default_ar)
+        return f"{en} / {ar}"
+
     def create_login_screen(self):
         """Creates the login screen interface with the original preferred design."""
         # Clear current frame
@@ -47,7 +50,7 @@ class AuthScreens:
         # Title inside the card
         title_label = create_styled_label(
             login_card_frame,
-            text=self.LANGUAGES[self.current_language].get("app_title", "Hookah Shop Manager"),
+            text=self.get_bilingual("app_title", "Hookah Shop Manager", "مدير متجر الشيشة"),
             style='subheading'
         )
         title_label.pack(pady=(30, 10))
@@ -55,7 +58,7 @@ class AuthScreens:
         # Subtitle (updated for modern look)
         subtitle_label = create_styled_label(
             login_card_frame,
-            text=self.LANGUAGES[self.current_language].get("login_subtitle", "Please login to continue"),
+            text=self.get_bilingual("login_subtitle", "Please login to continue", "يرجى تسجيل الدخول للمتابعة"),
             style='body'
         )
         subtitle_label.pack(pady=(0, 30))
@@ -63,14 +66,14 @@ class AuthScreens:
         # Username Label and Entry
         username_label = create_styled_label(
             login_card_frame,
-            text=self.LANGUAGES[self.current_language].get("username", "Username"),
+            text=self.get_bilingual("username", "Username", "اسم المستخدم"),
             style='subheading'
         )
         username_label.pack(pady=(10, 5), padx=40, anchor='w')
 
         self.username_entry = create_styled_entry(
             login_card_frame,
-            placeholder_text=self.LANGUAGES[self.current_language].get("username_placeholder", "Enter your username"),
+            placeholder_text=self.get_bilingual("username_placeholder", "Enter your username", "أدخل اسم المستخدم"),
             width=card_width - 80,
             height=45
         )
@@ -79,14 +82,14 @@ class AuthScreens:
         # Password Label and Entry
         password_label = create_styled_label(
             login_card_frame,
-            text=self.LANGUAGES[self.current_language].get("password", "Password"),
+            text=self.get_bilingual("password", "Password", "كلمة المرور"),
             style='subheading'
         )
         password_label.pack(pady=(10, 5), padx=40, anchor='w')
 
         self.password_entry = create_styled_entry(
             login_card_frame,
-            placeholder_text=self.LANGUAGES[self.current_language].get("password_placeholder", "Enter your password"),
+            placeholder_text=self.get_bilingual("password_placeholder", "Enter your password", "أدخل كلمة المرور"),
             show="*",
             width=card_width - 80,
             height=45
@@ -96,7 +99,7 @@ class AuthScreens:
         # Login Button
         login_button = create_styled_button(
             login_card_frame,
-            text=self.LANGUAGES[self.current_language].get("login", "Login"),
+            text=self.get_bilingual("login", "Login", "تسجيل الدخول"),
             style='primary',
             width=card_width - 80,
             height=50,
@@ -141,8 +144,8 @@ class AuthScreens:
         else:
             from ui_elements import show_error
             show_error(
-                self.LANGUAGES[self.current_language].get("login_error", "Please enter both username and password"),
-                self.current_language
+                self.get_bilingual("login_error", "Please enter both username and password", "يرجى إدخال اسم المستخدم وكلمة المرور"),
+                'en'
             )
 
     def switch_language(self, language):

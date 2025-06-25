@@ -15,45 +15,13 @@ from theme import (
 class MainMenu:
     def __init__(self, root, current_language, languages, callbacks):
         self.root = root
-        self.current_language = current_language
-        self.LANGUAGES = {
-            'en': {
-                'app_title': 'Hookah Shop Manager',
-                'manage_products': 'Manage Products',
-                'manage_inventory': 'Manage Inventory',
-                'record_sale': 'Record Sale',
-                'view_sales': 'View Sales Records',
-                'manage_suppliers': 'Manage Suppliers',
-                'manage_employees': 'Manage Employees',
-                'language': 'Language',
-                'toggle_theme': 'Toggle Theme',
-                'logout': 'Logout',
-                'welcome': 'Welcome to Hookah Shop Manager',
-                'quick_actions': 'Quick Actions',
-                'expenses_bills': 'Expenses and Bills',
-                'notifications_alerts': 'Notifications and Alerts'
-            },
-            'ar': {
-                'app_title': 'مدير متجر الشيشة',
-                'manage_products': 'إدارة المنتجات',
-                'manage_inventory': 'إدارة المخزون',
-                'record_sale': 'تسجيل عملية بيع',
-                'view_sales': 'عرض سجلات المبيعات',
-                'manage_suppliers': 'إدارة الموردين',
-                'manage_employees': 'إدارة الموظفين',
-                'language': 'اللغة',
-                'toggle_theme': 'تبديل المظهر',
-                'logout': 'تسجيل الخروج',
-                'welcome': 'مرحباً بك في مدير متجر الشيشة',
-                'quick_actions': 'إجراءات سريعة',
-                'expenses_bills': 'المصاريف والفواتير',
-                'notifications_alerts': 'الإشعارات والتنبيهات',
-                'manage_customers': 'إدارة العملاء',
-                'notifications': 'الإشعارات',
-                'reporting_analytics': 'التقارير والتحليلات'
-            }
-        }
+        self.LANGUAGES = languages
         self.callbacks = callbacks
+
+    def get_bilingual(self, key, default_en, default_ar):
+        en = self.LANGUAGES['en'].get(key, default_en)
+        ar = self.LANGUAGES['ar'].get(key, default_ar)
+        return f"{en} / {ar}"
 
     def create_main_menu(self):
         """Create the main menu interface"""
@@ -84,7 +52,7 @@ class MainMenu:
         # Logo/Title
         title_label = create_styled_label(
             self.sidebar,
-            text=self.LANGUAGES[self.current_language].get("app_title", "Hookah Shop Manager"),
+            text=self.get_bilingual("app_title", "Hookah Shop Manager", "مدير متجر الشيشة"),
             style='heading'
         )
         title_label.pack(pady=(30, 40))
@@ -100,13 +68,14 @@ class MainMenu:
             ("manage_customers", "Manage Customers", self.callbacks['manage_customers'], "👥"),
             ("reporting_analytics", "Reporting and Analytics", self.callbacks['reporting_analytics'], "📊"),
             ("expenses_bills", "Expenses and Bills", self.callbacks['expenses_bills'], "💸"),
-            ("notifications", "Notifications", self.callbacks['notifications'], "🔔")
+            ("notifications", "Notifications", self.callbacks['notifications'], "🔔"),
+            ("manage_stores", "Manage Stores", self.open_manage_stores, "🏬")
         ]
         
         for key, default_text, callback, icon in menu_items:
             button = create_styled_button(
                 self.sidebar,
-                text=f"{icon} {self.LANGUAGES[self.current_language].get(key, default_text)}",
+                text=f"{icon} {self.get_bilingual(key, default_text, self.LANGUAGES['ar'].get(key, default_text))}",
                 style='sidebar',
                 command=callback,
                 height=45
@@ -114,40 +83,10 @@ class MainMenu:
             button.text_key = key
             button.pack(fill='x', padx=5, pady=5)
         
-        # Language switcher
-        lang_frame = create_styled_frame(self.sidebar, style='sidebar')
-        lang_frame.pack(side='bottom', fill='x', padx=15, pady=20)
-        
-        lang_label = create_styled_label(
-            lang_frame,
-            text=self.LANGUAGES[self.current_language].get("language", "Language"),
-            style='subheading'
-        )
-        lang_label.text_key = "language"
-        lang_label.pack(pady=(0, 15))
-        
-        en_button = create_styled_button(
-            lang_frame,
-            text="🇬🇧 English",
-            style='sidebar',
-            command=lambda: self.switch_language("en"),
-            height=40
-        )
-        en_button.pack(fill='x', pady=5)
-        
-        ar_button = create_styled_button(
-            lang_frame,
-            text="🇸🇦 العربية",
-            style='sidebar',
-            command=lambda: self.switch_language("ar"),
-            height=40
-        )
-        ar_button.pack(fill='x', pady=5)
-        
         # Theme toggle
         theme_button = create_styled_button(
-            lang_frame,
-            text=f"🌓 {self.LANGUAGES[self.current_language].get('toggle_theme', 'Toggle Theme')}",
+            self.sidebar,
+            text=f"🌓 {self.get_bilingual('toggle_theme', 'Toggle Theme', 'تبديل المظهر')}",
             style='sidebar',
             command=self.toggle_theme,
             height=40
@@ -158,7 +97,7 @@ class MainMenu:
         # Logout button
         logout_button = create_styled_button(
             self.sidebar,
-            text="🚪 " + self.LANGUAGES[self.current_language].get("logout", "Logout"),
+            text="🚪 " + self.get_bilingual("logout", "Logout", "تسجيل الخروج"),
             style='error',
             command=self.callbacks['logout'],
             height=45
@@ -173,7 +112,7 @@ class MainMenu:
         # Welcome message
         welcome_label = create_styled_label(
             content_frame,
-            text=self.LANGUAGES[self.current_language].get("welcome", "Welcome to Hookah Shop Manager"),
+            text=self.get_bilingual("welcome", "Welcome to Hookah Shop Manager", "مرحباً بك في مدير متجر الشيشة"),
             style='heading'
         )
         welcome_label.text_key = "welcome"
@@ -182,7 +121,7 @@ class MainMenu:
         # Quick actions
         quick_actions_label = create_styled_label(
             content_frame,
-            text=self.LANGUAGES[self.current_language].get("quick_actions", "Quick Actions"),
+            text=self.get_bilingual("quick_actions", "Quick Actions", "إجراءات سريعة"),
             style='subheading'
         )
         quick_actions_label.text_key = "quick_actions"
@@ -222,7 +161,7 @@ class MainMenu:
             
             title_label = create_styled_label(
                 title_frame,
-                text=self.LANGUAGES[self.current_language].get(key, default_text),
+                text=self.get_bilingual(key, default_text, self.LANGUAGES['ar'].get(key, default_text)),
                 style='subheading'
             )
             title_label.pack(pady=(0, 10))
@@ -238,7 +177,7 @@ class MainMenu:
             # Action button
             action_button = create_styled_button(
                 card,
-                text=self.LANGUAGES[self.current_language].get(key, default_text),
+                text=self.get_bilingual(key, default_text, self.LANGUAGES['ar'].get(key, default_text)),
                 style='quick_action',
                 command=callback,
                 height=45
@@ -256,7 +195,7 @@ class MainMenu:
         try:
             subprocess.Popen(['start', filename], shell=True)
         except Exception as e:
-            show_error(f"Error opening {filename}: {str(e)}", self.current_language)
+            show_error(f"Error opening {filename}: {str(e)}", self.LANGUAGES['ar'].get('language', 'اللغة'))
 
     def clear_frame(self):
         """Clear the current frame"""
@@ -265,13 +204,19 @@ class MainMenu:
 
     def open_add_worker(self):
         """Open the Add Worker interface"""
-        add_worker_ui = AddWorker(self.root, self.current_language, self.LANGUAGES, self.create_main_menu)
+        add_worker_ui = AddWorker(self.root, self.LANGUAGES['ar'].get('language', 'اللغة'), self.LANGUAGES, self.create_main_menu)
         add_worker_ui.add_worker()
 
     def switch_language(self, language):
         """Switch the application language"""
         if language in self.LANGUAGES:
-            self.current_language = language
+            self.LANGUAGES = language
             self.create_main_menu()
         else:
-            show_error(f"Language {language} not supported", self.current_language)
+            show_error(f"Language {language} not supported", self.LANGUAGES['ar'].get('language', 'اللغة'))
+
+    def open_manage_stores(self):
+        """Open the Manage Stores interface"""
+        from manage_stores import ManageStores
+        manage_stores_ui = ManageStores(self.root, self.LANGUAGES, self.create_main_menu)
+        manage_stores_ui.manage_stores()
