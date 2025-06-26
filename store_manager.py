@@ -13,11 +13,11 @@ class StoreManager:
         self.current_language = current_language
         self.LANGUAGES = languages
         self.back_callback = back_callback
-        self.products = load_data("products") or []
+        self.products = load_data("store_products") or []
         self.inventory = load_data("inventory") or []
 
     def refresh_store(self):
-        self.products = load_data("products") or []
+        self.products = load_data("store_products") or []
         self.inventory = load_data("inventory") or []
         self.manage_store()
 
@@ -144,6 +144,7 @@ class StoreManager:
         dialog.title(self.LANGUAGES[self.current_language].get("add_from_inventory", "Add from Inventory"))
         dialog.geometry("400x370")
         dialog.grab_set()
+        dialog.attributes('-topmost', True)
         form_frame = create_styled_frame(dialog, style='card')
         form_frame.pack(fill='both', expand=True, padx=20, pady=20)
         # قائمة منسدلة بكل منتجات المخزون فقط (الكمية > 0)
@@ -154,6 +155,16 @@ class StoreManager:
         qty_label.pack(pady=(0, 5))
         qty_entry = create_styled_entry(form_frame)
         qty_entry.pack(fill='x', padx=20, pady=(0, 10))
+        # حقل السعر
+        price_label = create_styled_label(form_frame, text=self.LANGUAGES[self.current_language].get("price", "Price"), style='subheading')
+        price_label.pack(pady=(0, 5))
+        price_entry = create_styled_entry(form_frame)
+        price_entry.pack(fill='x', padx=20, pady=(0, 10))
+        # حقل الكمية القطاعي
+        retail_qty_label = create_styled_label(form_frame, text=self.LANGUAGES[self.current_language].get("retail_quantity", "Retail Quantity"), style='subheading')
+        retail_qty_label.pack(pady=(0, 5))
+        retail_qty_entry = create_styled_entry(form_frame)
+        retail_qty_entry.pack(fill='x', padx=20, pady=(0, 10))
         # اختيار نوع النقل (جملة أو قطاعي)
         type_label = create_styled_label(form_frame, text=self.LANGUAGES[self.current_language].get("product_type", "Type"), style='subheading')
         type_label.pack(pady=(0, 5))
@@ -168,6 +179,8 @@ class StoreManager:
             selected_name = inventory_menu.get()
             try:
                 qty = int(qty_entry.get())
+                price = float(price_entry.get()) if price_entry.get() else 0
+                retail_qty = int(retail_qty_entry.get()) if retail_qty_entry.get() else 0
             except Exception:
                 show_error("Invalid quantity", self.current_language)
                 return
@@ -183,20 +196,24 @@ class StoreManager:
             if store_item:
                 if transfer_type == self.LANGUAGES[self.current_language].get("wholesale", "Wholesale"):
                     store_item['quantity'] = store_item.get('quantity', 0) + qty
+                    store_item['price'] = price
+                    store_item['retail_quantity'] = retail_qty
                 else:
                     store_item['retail_quantity'] = store_item.get('retail_quantity', 0) + qty
+                    store_item['price'] = price
             else:
                 # أضف منتج جديد للمحل بنفس البيانات الأساسية
                 new_product = inv_item.copy()
                 if transfer_type == self.LANGUAGES[self.current_language].get("wholesale", "Wholesale"):
                     new_product['quantity'] = qty
-                    new_product['retail_quantity'] = 0
+                    new_product['retail_quantity'] = retail_qty
                 else:
                     new_product['quantity'] = 0
                     new_product['retail_quantity'] = qty
-                new_product['id'] = get_next_id('products')
+                new_product['id'] = get_next_id('store_products')
                 new_product['location'] = 'المحل / Shop'
                 new_product['source'] = 'inventory'
+                new_product['price'] = price
                 self.products.append(new_product)
             # خصم الكمية من المخزن
             inv_item['quantity'] -= qty
@@ -210,7 +227,7 @@ class StoreManager:
                     else:
                         product_in_inventory['retail_quantity'] = max(0, product_in_inventory.get('retail_quantity', 0) - qty)
             # --- حفظ البيانات في جميع المسارات ---
-            save_data("products", self.products)
+            save_data("store_products", self.products)
             save_data("inventory", self.inventory)
             # --- نهاية الحفظ ---
             print(f"[INFO] Product '{selected_name}' transferred as {transfer_type} on {transfer_date}")
@@ -232,6 +249,7 @@ class StoreManager:
         dialog.title("Edit Store Product")
         dialog.geometry("300x200")
         dialog.grab_set()
+        dialog.attributes('-topmost', True)
         
         form_frame = create_styled_frame(dialog, style='card')
         form_frame.pack(fill='both', expand=True, padx=20, pady=20)
@@ -258,7 +276,7 @@ class StoreManager:
                 product['quantity'] = new_qty
                 product['retail_quantity'] = new_retail_qty
                 
-                save_data("products", self.products)
+                save_data("store_products", self.products)
                 show_success("Product updated successfully!", self.current_language)
                 dialog.destroy()
                 self.refresh_store()
@@ -282,6 +300,6 @@ class StoreManager:
         
         if confirm:
             self.products.remove(product)
-            save_data("products", self.products)
+            save_data("store_products", self.products)
             show_success("Product deleted successfully!", self.current_language)
             self.refresh_store() 

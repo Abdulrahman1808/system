@@ -22,7 +22,8 @@ MONGODB_COLLECTIONS = {
     "accounts_receivable": "accounts_receivable",
     "accounts_payable": "accounts_payable",
     "employees": "employees",
-    "customers": "customers"
+    "customers": "customers",
+    "store_products": "store_products"
 }
 
 # Excel file paths
@@ -33,7 +34,8 @@ EXCEL_FILES = {
     "sales_journal": os.path.join(EXCEL_DATA_PATH, "sales_journal.xlsx"),
     "accounts_receivable": os.path.join(EXCEL_DATA_PATH, "accounts_receivable.xlsx"),
     "accounts_payable": os.path.join(EXCEL_DATA_PATH, "accounts_payable.xlsx"),
-    "employees": os.path.join(EXCEL_DATA_PATH, "hookah_employees.xlsx")
+    "employees": os.path.join(EXCEL_DATA_PATH, "hookah_employees.xlsx"),
+    "store_products": os.path.join(EXCEL_DATA_PATH, "hookah_store_products.xlsx")
 }
 
 # MongoDB configuration
