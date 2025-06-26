@@ -71,6 +71,7 @@ class StoreManager:
             ("quantity", "Quantity"),
             ("retail_quantity", "Retail Qty"),
             ("price", "Price"),
+            ("barcode", "Barcode"),
             ("actions", "Actions")
         ]
         for i, (key, default_text) in enumerate(headers):
@@ -117,9 +118,16 @@ class StoreManager:
             )
             price_label.grid(row=i, column=4, padx=10, pady=10, sticky='w')
             
+            barcode_label = create_styled_label(
+                scrollable_table,
+                text=str(product.get('barcode', '')),
+                style='body'
+            )
+            barcode_label.grid(row=i, column=5, padx=10, pady=10, sticky='w')
+            
             # أزرار الإجراءات
             actions_frame = create_styled_frame(scrollable_table, style='card')
-            actions_frame.grid(row=i, column=5, padx=10, pady=10, sticky='w')
+            actions_frame.grid(row=i, column=6, padx=10, pady=10, sticky='w')
             
             edit_button = create_styled_button(
                 actions_frame,
