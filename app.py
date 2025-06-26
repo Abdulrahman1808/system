@@ -76,6 +76,7 @@ class HookahShopApp:
         self.callbacks = {
             'manage_products': self.show_product_manager,
             'manage_inventory': self.show_inventory_manager,
+            'manage_store': self.show_store_manager,
             'record_sale': self.show_record_sale,
             'view_sales': self.show_sales_records,
             'manage_suppliers': self.show_suppliers,
@@ -232,6 +233,11 @@ class HookahShopApp:
         if language in self.LANGUAGES:
             self.current_language = language
             self.show_main_menu()
+    
+    def show_store_manager(self):
+        from store_manager import StoreManager
+        store_manager = StoreManager(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
+        store_manager.manage_store()
 
 if __name__ == "__main__":
     root = ctk.CTk()

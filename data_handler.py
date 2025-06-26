@@ -107,7 +107,10 @@ def load_data(data_type):
                 
                 return data
             else:
-                # If JSON doesn't exist, try to load from Excel
+                # If JSON doesn't exist, try to load from Excel (except for products)
+                if data_type == 'products':
+                    print(f"[DEBUG] No data files found for products, returning empty list")
+                    return []
                 excel_path = EXCEL_FILES[data_type]
                 if os.path.exists(excel_path):
                     print(f"[DEBUG] Loading from Excel: {excel_path}")
@@ -206,6 +209,10 @@ def export_to_excel(data_type):
         if data is None:
             return False
 
+        # تصدير المنتجات المعرفة فقط إذا كان نوع البيانات products
+        if data_type == 'products':
+            data = [item for item in data if item.get('source', 'defined') != 'inventory']
+
         df = pd.DataFrame(data)
         excel_path = EXCEL_FILES[data_type]
         df.to_excel(excel_path, index=False)
@@ -213,6 +220,66 @@ def export_to_excel(data_type):
         return True
     except Exception as e:
         print(f"[ERROR] Error exporting to Excel: {str(e)}")
+        return False
+
+def merge_excel_data(data_type, excel_data):
+    """Merge Excel data with existing database data instead of replacing"""
+    if data_type not in MONGODB_COLLECTIONS:
+        print(f"[ERROR] Unknown data type for merging: {data_type}")
+        return False
+
+    try:
+        # Load existing data
+        existing_data = load_data(data_type) or []
+        print(f"[DEBUG] Existing data count: {len(existing_data)}")
+        
+        # Create a dictionary of existing data by name and barcode for quick lookup
+        existing_by_name = {item.get('name', '').lower(): item for item in existing_data}
+        existing_by_barcode = {item.get('barcode', ''): item for item in existing_data}
+        
+        # Process Excel data
+        merged_data = existing_data.copy()
+        updated_count = 0
+        added_count = 0
+        
+        for excel_item in excel_data:
+            excel_name = excel_item.get('name', '').lower()
+            excel_barcode = excel_item.get('barcode', '')
+            
+            # Check if item exists by name or barcode
+            existing_item = None
+            if excel_name in existing_by_name:
+                existing_item = existing_by_name[excel_name]
+            elif excel_barcode and excel_barcode in existing_by_barcode:
+                existing_item = existing_by_barcode[excel_barcode]
+            
+            if existing_item:
+                # Update existing item with Excel data
+                for key, value in excel_item.items():
+                    if value is not None and value != '':
+                        existing_item[key] = value
+                updated_count += 1
+                print(f"[DEBUG] Updated existing item: {excel_item.get('name', 'Unknown')}")
+            else:
+                # Add new item
+                if 'id' not in excel_item:
+                    excel_item['id'] = get_next_id(data_type)
+                merged_data.append(excel_item)
+                added_count += 1
+                print(f"[DEBUG] Added new item: {excel_item.get('name', 'Unknown')}")
+        
+        # Save merged data
+        if save_data(data_type, merged_data):
+            print(f"[DEBUG] Successfully merged Excel data: {updated_count} updated, {added_count} added")
+            return True
+        else:
+            print(f"[ERROR] Failed to save merged data")
+            return False
+            
+    except Exception as e:
+        print(f"[ERROR] Error merging Excel data: {str(e)}")
+        import traceback
+        print(f"[TRACEBACK] {traceback.format_exc()}")
         return False
 
 def import_from_excel(data_type):
@@ -249,16 +316,13 @@ def import_from_excel(data_type):
                 print(f"[DEBUG] Added missing columns to Excel: {missing}")
         data = df.to_dict('records')
         print(f"[DEBUG] Read {len(data)} records from Excel")
-        # Ensure collection exists
-        if db is not None:
-            ensure_collection(MONGODB_COLLECTIONS[data_type])
-            print(f"[DEBUG] Ensured collection exists: {MONGODB_COLLECTIONS[data_type]}")
-        # Save to both MongoDB and JSON
-        if save_data(data_type, data):
-            print(f"[DEBUG] Successfully imported {len(data)} items from Excel")
+        
+        # Merge Excel data with existing data instead of replacing
+        if merge_excel_data(data_type, data):
+            print(f"[DEBUG] Successfully imported and merged {len(data)} items from Excel")
             return True
         else:
-            print(f"[ERROR] Failed to save imported data")
+            print(f"[ERROR] Failed to merge imported data")
             return False
     except Exception as e:
         print(f"[ERROR] Error importing from Excel: {str(e)}")

@@ -161,7 +161,10 @@ class ProductManager:
             ("product_name", "Product Name"),
             ("product_type", "Type"),
             ("product_flavor", "Flavor"),
+            ("product_weight", "Weight"),
             ("product_price", "Price"),
+            ("quantity", self.LANGUAGES[self.current_language].get("wholesale_quantity", "Wholesale Qty")),
+            ("retail_quantity", self.LANGUAGES[self.current_language].get("retail_quantity", "Retail Qty")),
             ("product_status", "Status"),
             ("actions", "Actions")
         ]
@@ -169,13 +172,14 @@ class ProductManager:
         for i, (key, default_text) in enumerate(headers):
             header = create_styled_label(
                 scrollable_table,
-                text=self.LANGUAGES[self.current_language].get(key, default_text),
+                text=default_text,
                 style='subheading'
             )
             header.grid(row=0, column=i, padx=10, pady=10, sticky='w')
         
-        # Products list
-        for i, product in enumerate(self.products, 1):
+        # فلترة المنتجات لتشمل المتاحة والجارية
+        filtered_products = [p for p in self.products if str(p.get('status', '')).strip().lower() in ['active', 'available'] and p.get('source', 'defined') != 'inventory']
+        for i, product in enumerate(filtered_products, 1):
             # Product details
             image_path = str(product.get('image_path', '')) if product.get('image_path') is not None else ''
             if image_path and os.path.exists(image_path):
@@ -215,30 +219,56 @@ class ProductManager:
             )
             flavor_label.grid(row=i, column=3, padx=10, pady=10, sticky='w')
             
+            # Weight
+            weight_label = create_styled_label(
+                scrollable_table,
+                text=str(product.get('weight', '')),
+                style='body'
+            )
+            weight_label.grid(row=i, column=4, padx=10, pady=10, sticky='w')
+            
             price_label = create_styled_label(
                 scrollable_table,
                 text=f"${float(product.get('price', 0) or 0):.2f}",
                 style='body'
             )
-            price_label.grid(row=i, column=4, padx=10, pady=10, sticky='w')
-            
+            price_label.grid(row=i, column=5, padx=10, pady=10, sticky='w')
+
+            # Wholesale quantity (from 'quantity')
+            wholesale_qty = product.get('quantity', 0)
+            wholesale_label = create_styled_label(
+                scrollable_table,
+                text=str(wholesale_qty),
+                style='body'
+            )
+            wholesale_label.grid(row=i, column=6, padx=10, pady=10, sticky='w')
+
+            # Retail quantity
+            retail_qty = product.get('retail_quantity', 0)
+            retail_label = create_styled_label(
+                scrollable_table,
+                text=str(retail_qty),
+                style='body'
+            )
+            retail_label.grid(row=i, column=7, padx=10, pady=10, sticky='w')
+
             status_label = create_styled_label(
                 scrollable_table,
                 text=str(product.get('status', 'active')),
                 style='body'
             )
-            status_label.grid(row=i, column=5, padx=10, pady=10, sticky='w')
+            status_label.grid(row=i, column=8, padx=10, pady=10, sticky='w')
             
             # Action buttons
             actions_frame = create_styled_frame(scrollable_table, style='card')
-            actions_frame.grid(row=i, column=6, padx=10, pady=10, sticky='w')
+            actions_frame.grid(row=i, column=9, padx=10, pady=10, sticky='w')
             
             edit_button = create_styled_button(
                 actions_frame,
                 text=self.LANGUAGES[self.current_language].get("edit", "Edit"),
                 style='outline',
                 width=80,
-                command=lambda p=product: self.edit_product(p)
+                command=lambda pid=product.get('id'): self.edit_product(pid)
             )
             edit_button.pack(side='left', padx=5)
             
@@ -247,7 +277,7 @@ class ProductManager:
                 text=self.LANGUAGES[self.current_language].get("delete", "Delete"),
                 style='error',
                 width=80,
-                command=lambda p=product: self.delete_product(p)
+                command=lambda pid=product.get('id'): self.delete_product(pid)
             )
             delete_button.pack(side='left', padx=5)
 
@@ -275,7 +305,26 @@ class ProductManager:
         )
         title_label.pack(pady=20)
         
-        # Product name
+        # Location (Dropdown)
+        location_label = create_styled_label(
+            form_frame,
+            text=self.get_bilingual("location", "Location", "المكان"),
+            style='subheading'
+        )
+        location_label.pack(pady=(0, 5))
+        stores_file = os.path.join("excel_data", "stores.json")
+        locations = ["المحل / Shop"]
+        if os.path.exists(stores_file):
+            with open(stores_file, 'r', encoding='utf-8') as f:
+                stores = json.load(f)
+                locations += [store['name'] for store in stores]
+        location_menu = create_styled_option_menu(
+            form_frame,
+            values=locations
+        )
+        location_menu.pack(fill='x', padx=20, pady=(0, 10))
+        
+        # Product name (قائمة منسدلة أو إدخال جديد)
         name_label = create_styled_label(
             form_frame,
             text=self.get_bilingual("product_name", "Product Name", "اسم المنتج"),
@@ -283,8 +332,50 @@ class ProductManager:
         )
         name_label.pack(pady=(0, 5))
         
-        name_entry = create_styled_entry(form_frame)
-        name_entry.pack(fill='x', padx=20, pady=(0, 10))
+        # إطار لاسم المنتج
+        name_frame = create_styled_frame(form_frame, style='card')
+        name_frame.pack(fill='x', padx=20, pady=(0, 10))
+        
+        # قائمة منسدلة بالمنتجات الموجودة في المخزن
+        inventory = load_data("inventory") or []
+        inventory_names = [item.get('name', '') for item in inventory if item.get('quantity', 0) > 0]
+        self.name_menu = create_styled_option_menu(
+            name_frame,
+            values=["-- اختر منتج من المخزن --"] + inventory_names + ["-- إضافة منتج جديد --"]
+        )
+        self.name_menu.pack(side='left', fill='x', expand=True, padx=(0, 10))
+        
+        # حقل إدخال اسم المنتج الجديد
+        self.name_entry = create_styled_entry(name_frame)
+        self.name_entry.pack(side='right', fill='x', expand=True)
+        self.name_entry.pack_forget()  # مخفي افتراضياً
+        
+        def on_name_selection(value):
+            if value == "-- إضافة منتج جديد --":
+                self.name_menu.pack_forget()
+                self.name_entry.pack(side='left', fill='x', expand=True, padx=(0, 10))
+            elif value != "-- اختر منتج من المخزن --":
+                # إذا تم اختيار منتج من المخزن، املأ البيانات تلقائياً
+                selected_item = next((item for item in inventory if item.get('name') == value), None)
+                if selected_item:
+                    # املأ البيانات تلقائياً
+                    if hasattr(self, 'flavor_entry'):
+                        self.flavor_entry.delete(0, 'end')
+                        self.flavor_entry.insert(0, selected_item.get('flavor', ''))
+                    if hasattr(self, 'weight_menu'):
+                        self.weight_menu.set(selected_item.get('weight', '-'))
+                    if hasattr(self, 'type_menu'):
+                        self.type_menu.set(selected_item.get('type', self.get_bilingual("wholesale", "Wholesale", "جملة")))
+                    if hasattr(self, 'quantity_menu'):
+                        self.quantity_menu.set(str(selected_item.get('quantity', 1)))
+                    if hasattr(self, 'price_entry'):
+                        self.price_entry.delete(0, 'end')
+                        self.price_entry.insert(0, str(selected_item.get('price', 0)))
+                    if hasattr(self, 'barcode_entry'):
+                        self.barcode_entry.delete(0, 'end')
+                        self.barcode_entry.insert(0, selected_item.get('barcode', ''))
+        
+        self.name_menu.configure(command=on_name_selection)
         
         # Product flavor (اختياري)
         flavor_label = create_styled_label(
@@ -293,8 +384,8 @@ class ProductManager:
             style='subheading'
         )
         flavor_label.pack(pady=(0, 5))
-        flavor_entry = create_styled_entry(form_frame)
-        flavor_entry.pack(fill='x', padx=20, pady=(0, 10))
+        self.flavor_entry = create_styled_entry(form_frame)
+        self.flavor_entry.pack(fill='x', padx=20, pady=(0, 10))
         
         # Product weight (Dropdown اختياري)
         weight_label = create_styled_label(
@@ -316,7 +407,7 @@ class ProductManager:
             self.get_bilingual("weight_750g", "750g", "750 جم"),
             self.get_bilingual("weight_1kg", "1kg", "1 كجم"),
             self.get_bilingual("weight_1500g", "1500g", "1500 جم"),
-            self.get_bilingual("weight_11750g", "11750g", "1750 جم"),
+            self.get_bilingual("weight_11750g", "1750g", "1750 جم"),
             
             self.get_bilingual("weight_2kg", "2kg", "2 كجم"),
             self.get_bilingual("weight_2500g", "2500g", "2500 جم"),
@@ -328,12 +419,12 @@ class ProductManager:
         # أضف خيارات 2-10 كيلو
         for kg in range(2, 11):
             weight_options.append(self.get_bilingual(f"weight_{kg}kg", f"{kg}kg", f"{kg} كجم"))
-        weight_menu = create_styled_option_menu(
+        self.weight_menu = create_styled_option_menu(
             form_frame,
             values=["-"] + weight_options
         )
-        weight_menu.set("-")
-        weight_menu.pack(fill='x', padx=20, pady=(0, 10))
+        self.weight_menu.set("-")
+        self.weight_menu.pack(fill='x', padx=20, pady=(0, 10))
         
         # Product type (Dropdown)
         type_label = create_styled_label(
@@ -342,14 +433,14 @@ class ProductManager:
             style='subheading'
         )
         type_label.pack(pady=(0, 5))
-        type_menu = create_styled_option_menu(
+        self.type_menu = create_styled_option_menu(
             form_frame,
             values=[
                 self.get_bilingual("wholesale", "Wholesale", "جملة"),
                 self.get_bilingual("retail", "Retail", "قطاعي")
             ]
         )
-        type_menu.pack(fill='x', padx=20, pady=(0, 10))
+        self.type_menu.pack(fill='x', padx=20, pady=(0, 10))
         
         # Retail quantity (يظهر فقط إذا كان جملة)
         retail_quantity_label = create_styled_label(
@@ -371,7 +462,7 @@ class ProductManager:
             else:
                 retail_quantity_label.pack_forget()
                 retail_quantity_menu.pack_forget()
-        type_menu.configure(command=on_type_change)
+        self.type_menu.configure(command=on_type_change)
         
         # Product quantity (Dropdown 1-1000)
         quantity_label = create_styled_label(
@@ -380,30 +471,11 @@ class ProductManager:
             style='subheading'
         )
         quantity_label.pack(pady=(0, 5))
-        quantity_menu = create_styled_option_menu(
+        self.quantity_menu = create_styled_option_menu(
             form_frame,
             values=[str(i) for i in range(1, 1001)]
         )
-        quantity_menu.pack(fill='x', padx=20, pady=(0, 10))
-        
-        # Location (Dropdown)
-        location_label = create_styled_label(
-            form_frame,
-            text=self.get_bilingual("location", "Location", "المكان"),
-            style='subheading'
-        )
-        location_label.pack(pady=(0, 5))
-        stores_file = os.path.join("excel_data", "stores.json")
-        locations = ["المحل / Shop"]
-        if os.path.exists(stores_file):
-            with open(stores_file, 'r', encoding='utf-8') as f:
-                stores = json.load(f)
-                locations += [store['name'] for store in stores]
-        location_menu = create_styled_option_menu(
-            form_frame,
-            values=locations
-        )
-        location_menu.pack(fill='x', padx=20, pady=(0, 10))
+        self.quantity_menu.pack(fill='x', padx=20, pady=(0, 10))
         
         # Barcode (إجباري)
         barcode_label_text = ("Barcode / باركود" if self.current_language == 'en' else "باركود / Barcode")
@@ -413,8 +485,8 @@ class ProductManager:
             style='subheading'
         )
         barcode_label.pack(pady=(0, 5))
-        barcode_entry = create_styled_entry(form_frame)
-        barcode_entry.pack(fill='x', padx=20, pady=(0, 10))
+        self.barcode_entry = create_styled_entry(form_frame)
+        self.barcode_entry.pack(fill='x', padx=20, pady=(0, 10))
         
         # Price
         price_label = create_styled_label(
@@ -424,8 +496,8 @@ class ProductManager:
         )
         price_label.pack(pady=(0, 5))
         
-        price_entry = create_styled_entry(form_frame)
-        price_entry.pack(fill='x', padx=20, pady=(0, 10))
+        self.price_entry = create_styled_entry(form_frame)
+        self.price_entry.pack(fill='x', padx=20, pady=(0, 10))
         
         # Status
         status_label = create_styled_label(
@@ -477,17 +549,31 @@ class ProductManager:
 
         # Save button
         def save():
-            name = name_entry.get().strip()
-            flavor = flavor_entry.get().strip() if flavor_entry.get().strip() else ""
-            weight = weight_menu.get() if weight_menu.get() != "-" else ""
-            type_val = type_menu.get()
-            quantity = quantity_menu.get()
-            price = float(price_entry.get())
+            # الحصول على اسم المنتج من القائمة المنسدلة أو حقل الإدخال
+            if self.name_menu.winfo_ismapped():
+                # إذا كانت القائمة المنسدلة ظاهرة
+                selected_name = self.name_menu.get()
+                if selected_name in ["-- اختر منتج من المخزن --", "-- إضافة منتج جديد --"]:
+                    show_error("Please select a product or choose 'Add New Product'", self.current_language)
+                    return
+                name = selected_name
+            else:
+                # إذا كان حقل الإدخال ظاهر
+                name = self.name_entry.get().strip()
+                if not name:
+                    show_error("Please enter a product name", self.current_language)
+                    return
+            
+            flavor = self.flavor_entry.get().strip() if self.flavor_entry.get().strip() else ""
+            weight = self.weight_menu.get() if self.weight_menu.get() != "-" else ""
+            type_val = self.type_menu.get()
+            quantity = self.quantity_menu.get()
+            price = float(self.price_entry.get())
             status = status_menu.get()
             location = location_menu.get()
             retail_quantity = retail_quantity_menu.get() if type_val == self.get_bilingual("wholesale", "Wholesale", "جملة") else ""
             is_wholesale_supplier = type_val == self.get_bilingual("wholesale", "Wholesale", "جملة")
-            self.save_product(dialog, name, type_val, flavor, quantity, price, status, self.selected_image_path, barcode_entry.get(), location, weight, retail_quantity, is_wholesale_supplier)
+            self.save_product(dialog, name, type_val, flavor, quantity, price, status, self.selected_image_path, self.barcode_entry.get(), location, weight, retail_quantity, is_wholesale_supplier)
         save_button = create_styled_button(
             scrollable_form_frame,
             text=self.get_bilingual("save", "Save", "حفظ"),
@@ -496,18 +582,16 @@ class ProductManager:
         )
         save_button.pack(fill='x', padx=20, pady=(0, 20))
 
-    def edit_product(self, product_name=None):
+    def edit_product(self, product_id=None):
         """Edit an existing product"""
-        if product_name is None:
+        if product_id is None:
             return
-        
-        # Find the product
+        # Find the product by id
         product = None
         for p in self.products:
-            if p['name'] == product_name:
+            if p.get('id') == product_id:
                 product = p
                 break
-        
         if not product:
             show_error("Product not found", self.current_language)
             return
@@ -560,6 +644,44 @@ class ProductManager:
         )
         flavor_menu.set(product['flavor'])
         flavor_menu.pack(fill='x', padx=20, pady=(0, 10))
+        
+        # Product weight
+        weight_label = create_styled_label(
+            form_frame,
+            text=self.get_bilingual("product_weight", "Product Weight", "وزن المنتج"),
+            style='subheading'
+        )
+        weight_label.pack(pady=(0, 5))
+        weight_options = [
+            self.get_bilingual("weight_50g", "50g", "50 جم"),
+            self.get_bilingual("weight_100g", "100g", "100 جم"),
+            self.get_bilingual("weight_150g", "150g", "150 جم"),
+            self.get_bilingual("weight_250g", "250g", "250 جم"),
+            self.get_bilingual("weight_300g", "300g", "300 جم"),
+            self.get_bilingual("weight_350g", "350g", "350 جم"),
+            self.get_bilingual("weight_400g", "400g", "400 جم"),
+            self.get_bilingual("weight_450g", "450g", "450 جم"),
+            self.get_bilingual("weight_500g", "500g", "500 جم"),
+            self.get_bilingual("weight_750g", "750g", "750 جم"),
+            self.get_bilingual("weight_1kg", "1kg", "1 كجم"),
+            self.get_bilingual("weight_1500g", "1500g", "1500 جم"),
+            self.get_bilingual("weight_11750g", "11750g", "1750 جم"),
+            self.get_bilingual("weight_2kg", "2kg", "2 كجم"),
+            self.get_bilingual("weight_2500g", "2500g", "2500 جم"),
+            self.get_bilingual("weight_3kg", "3kg", "3 كجم"),
+            self.get_bilingual("weight_3500g", "3500g", "3500 جم"),
+            self.get_bilingual("weight_4kg", "4kg", "4 كجم"),
+            self.get_bilingual("weight_4500g", "4500g", "4500 جم"),
+        ]
+        # أضف خيارات 2-10 كيلو
+        for kg in range(2, 11):
+            weight_options.append(self.get_bilingual(f"weight_{kg}kg", f"{kg}kg", f"{kg} كجم"))
+        weight_menu = create_styled_option_menu(
+            form_frame,
+            values=["-"] + weight_options
+        )
+        weight_menu.set(product.get('weight', '-'))
+        weight_menu.pack(fill='x', padx=20, pady=(0, 10))
         
         # Product quantity
         quantity_label = create_styled_label(
@@ -688,9 +810,9 @@ class ProductManager:
         self.edit_image_preview = ctk.CTkLabel(form_frame, text="", width=100, height=100)
         self.edit_image_preview.pack(pady=(10, 10))
         # Display existing image if available
-        if self.selected_image_path and os.path.exists(self.selected_image_path):
+        if self.selected_image_path and os.path.exists(str(self.selected_image_path)):
             try:
-                img = Image.open(self.selected_image_path)
+                img = Image.open(str(self.selected_image_path))
                 img.thumbnail((100, 100)) # Resize for preview
                 img_tk = ctk.CTkImage(light_image=img, dark_image=img, size=(100, 100))
                 self.edit_image_preview.configure(image=img_tk, text="")
@@ -733,10 +855,33 @@ class ProductManager:
                 barcode_entry.get(),
                 location_menu.get(),
                 retail_quantity_menu.get() if type_menu.get() == self.get_bilingual("wholesale", "Wholesale", "جملة") else "",
-                type_menu.get() == self.get_bilingual("wholesale", "Wholesale", "جملة")
+                type_menu.get() == self.get_bilingual("wholesale", "Wholesale", "جملة"),
+                weight_menu.get()
             )
         )
         update_button.pack(pady=20)
+        
+        # Save button
+        save_button = create_styled_button(
+            form_frame,
+            text=self.get_bilingual("save", "Save", "حفظ"),
+            style='primary',
+            command=lambda: self.update_product(
+                dialog,
+                product['name'],
+                name_entry.get(),
+                type_menu.get(),
+                flavor_menu.get(),
+                quantity_entry.get(),
+                self.selected_image_path,
+                barcode_entry.get(),
+                location_menu.get(),
+                retail_quantity_menu.get() if type_menu.get() == self.get_bilingual("wholesale", "Wholesale", "جملة") else "",
+                type_menu.get() == self.get_bilingual("wholesale", "Wholesale", "جملة"),
+                weight_menu.get()
+            )
+        )
+        save_button.pack(pady=10)
         
         # Cancel button
         cancel_button = create_styled_button(
@@ -818,13 +963,38 @@ class ProductManager:
         except ValueError:
             show_error(self.get_bilingual("invalid_value", "Invalid value. Please enter a number.", "قيمة غير صالحة. يرجى إدخال رقم."), "en")
             return
-        # Check if product with the same name or barcode already exists
-        if any(p.get('name', '').lower() == name.lower() for p in self.products):
-            show_error(self.get_bilingual("product_exists", "Product with this name already exists.", "يوجد منتج بهذا الاسم بالفعل."), "en")
+        
+        # إذا كان المكان هو المحل، تحقق إذا كان المنتج موجود بالفعل
+        if location.strip().lower() in ["المحل", "shop", "المحل / shop"]:
+            existing = next((p for p in self.products if (p.get('name', '').lower() == name.lower() or p.get('barcode', '') == barcode) and p.get('location', '').strip().lower() in ["المحل", "shop", "المحل / shop"]), None)
+            if existing:
+                existing['quantity'] = int(existing.get('quantity', 0)) + quantity
+                save_data("products", self.products)
+                if self.record_sale_instance:
+                    self.record_sale_instance.refresh_products()
+                self.refresh_products()
+                dialog.destroy()
+                show_success(self.get_bilingual("product_added_success", "Product quantity increased successfully!", "تمت زيادة كمية المنتج بنجاح!"), "en")
+                return
+            else:
+                # خصم الكمية من المخزن إذا كان المنتج موجود هناك
+                inventory = load_data("inventory") or []
+                inventory_item = next((item for item in inventory if item.get('name', '').lower() == name.lower() or item.get('barcode', '') == barcode), None)
+                if inventory_item:
+                    current_qty = inventory_item.get('quantity', 0)
+                    if current_qty >= quantity:
+                        inventory_item['quantity'] = current_qty - quantity
+                        save_data("inventory", inventory)
+                        print(f"[DEBUG] Deducted {quantity} from inventory for {name}")
+                    else:
+                        show_error(f"Not enough quantity in inventory. Available: {current_qty}, Required: {quantity}", self.current_language)
+                        return
+        
+        # تحقق من تكرار الباركود أو الاسم في أماكن أخرى
+        if any((p.get('name', '').lower() == name.lower() or p.get('barcode', '') == barcode) for p in self.products if p.get('location', '').strip().lower() != location.strip().lower()):
+            show_error(self.get_bilingual("product_exists", "Product with this name or barcode already exists in another location.", "يوجد منتج بهذا الاسم أو الباركود في مكان آخر."), "en")
             return
-        if any(p.get('barcode', '') == barcode for p in self.products):
-            show_error(self.get_bilingual("barcode_exists", "Product with this barcode already exists.", "يوجد منتج بهذا الباركود بالفعل."), "en")
-            return
+        
         new_product = {
             'id': get_next_id('products'),
             'name': name,
@@ -842,14 +1012,33 @@ class ProductManager:
         }
         self.products.append(new_product)
         save_data("products", self.products)
-        # Notify RecordSale to refresh its list
+        
+        # --- التعديل هنا: إضافة المنتج للـ inventory إذا لم يكن المحل ---
+        if location.strip().lower() not in ["المحل", "shop", "المحل / shop"]:
+            inventory = load_data("inventory") or []
+            inventory_item = next((item for item in inventory if item.get('name', '').lower() == name.lower()), None)
+            if inventory_item:
+                inventory_item['quantity'] += quantity
+            else:
+                new_item = {
+                    'id': get_next_id('inventory'),
+                    'name': name,
+                    'category': type,
+                    'quantity': quantity,
+                    'min_quantity': 0,
+                    'location': location
+                }
+                inventory.append(new_item)
+            save_data("inventory", inventory)
+        # --- نهاية التعديل ---
+        
         if self.record_sale_instance:
             self.record_sale_instance.refresh_products()
         self.refresh_products()
         dialog.destroy()
         show_success(self.get_bilingual("product_added_success", "Product added successfully!", "تمت إضافة المنتج بنجاح!"), "en")
 
-    def update_product(self, dialog, old_name, name, type, flavor, quantity, image_path, barcode, location, retail_quantity, is_wholesale_supplier):
+    def update_product(self, dialog, old_name, name, type, flavor, quantity, image_path, barcode, location, retail_quantity, is_wholesale_supplier, weight):
         """Update an existing product"""
         if not name or not quantity or not barcode:
             show_error(self.get_bilingual("name_quantity_required", "Product Name, Quantity and Barcode are required.", "اسم المنتج، الكمية، والباركود مطلوبة"), "en")
@@ -871,6 +1060,7 @@ class ProductManager:
                 product['location'] = location
                 product['retail_quantity'] = retail_quantity
                 product['is_wholesale_supplier'] = is_wholesale_supplier
+                product['weight'] = weight
                 break
         save_data("products", self.products)
         # Notify RecordSale to refresh its list
@@ -880,8 +1070,12 @@ class ProductManager:
         dialog.destroy()
         show_success(self.get_bilingual("product_updated_success", "Product updated successfully!", "تم تحديث المنتج بنجاح!"), "en")
 
-    def delete_product(self, product):
-        """Delete a product"""
+    def delete_product(self, product_id):
+        """Delete a product by id"""
+        product = next((p for p in self.products if p.get('id') == product_id), None)
+        if not product:
+            show_error(self.LANGUAGES[self.current_language].get("product_not_found", "Product not found."), self.current_language)
+            return
         confirm = messagebox.askyesno(
             self.LANGUAGES[self.current_language].get("confirm_delete", "Confirm Delete"),
             self.LANGUAGES[self.current_language].get("confirm_delete_product", f"Are you sure you want to delete {product.get('name', 'this product')}?")
@@ -890,7 +1084,6 @@ class ProductManager:
             try:
                 self.products.remove(product)
                 save_data("products", self.products)
-                # Notify RecordSale to refresh its list
                 if self.record_sale_instance:
                     self.record_sale_instance.refresh_products()
                 self.refresh_products()

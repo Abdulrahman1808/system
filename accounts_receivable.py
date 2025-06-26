@@ -19,9 +19,9 @@ class RecordSale:
         self.LANGUAGES = languages
         self.back_callback = back_callback
         self.cart = []
-        # Load products initially, but don't display until record_sale is called
         self.products = load_data("products") or []
         self.products = [p for p in self.products if p.get('status', 'Active') == 'Active']
+        self.sale_type = 'wholesale'  # الافتراضي جملة
 
     def refresh_products(self):
         """Refresh the products list from database and update display"""
@@ -85,6 +85,16 @@ class RecordSale:
                                 style='subheading'
                             )
                             name_label.pack(side='left', padx=10)
+
+                            # عرض الكميات المتاحة جملة وقطاعي
+                            qty_text = f" | {self.LANGUAGES[self.current_language].get('wholesale_quantity', 'Wholesale Qty')}: {product.get('quantity', 0)}"
+                            qty_text += f" | {self.LANGUAGES[self.current_language].get('retail_quantity', 'Retail Qty')}: {product.get('retail_quantity', 0)}"
+                            qty_label = create_styled_label(
+                                details_frame,
+                                text=qty_text,
+                                style='small'
+                            )
+                            qty_label.pack(side='left', padx=10)
                             
                             price_label = create_styled_label(
                                 details_frame,
@@ -232,6 +242,33 @@ class RecordSale:
         self.barcode_entry.pack(side='left', padx=10, pady=10, fill='x', expand=True)
         self.barcode_entry.bind('<Return>', self.handle_barcode_entry)
         
+        # اختيار نوع البيع (جملة أو قطاعي)
+        sale_type_frame = create_styled_frame(left_frame, style='card')
+        sale_type_frame.pack(fill='x', padx=20, pady=(0, 10))
+        sale_type_label = create_styled_label(
+            sale_type_frame,
+            text=self.LANGUAGES[self.current_language].get('sale_type', 'Sale Type:'),
+            style='body'
+        )
+        sale_type_label.pack(side='left', padx=10, pady=10)
+        self.sale_type_var = ctk.StringVar(value=self.sale_type)
+        wholesale_radio = ctk.CTkRadioButton(
+            sale_type_frame,
+            text=self.LANGUAGES[self.current_language].get('wholesale', 'Wholesale'),
+            variable=self.sale_type_var,
+            value='wholesale',
+            command=lambda: self.set_sale_type('wholesale')
+        )
+        wholesale_radio.pack(side='left', padx=10)
+        retail_radio = ctk.CTkRadioButton(
+            sale_type_frame,
+            text=self.LANGUAGES[self.current_language].get('retail', 'Retail'),
+            variable=self.sale_type_var,
+            value='retail',
+            command=lambda: self.set_sale_type('retail')
+        )
+        retail_radio.pack(side='left', padx=10)
+        
         # Search section
         search_frame = create_styled_frame(left_frame, style='card')
         search_frame.pack(fill='x', padx=20, pady=(0, 20))
@@ -313,18 +350,17 @@ class RecordSale:
     def add_to_cart(self, product):
         """Add a product to the cart"""
         try:
-            # Check if product is already in cart
+            # Check if product is already in cart with same sale type
             for item in self.cart:
-                # Ensure 'id' exists in product dictionary
-                if item['product'].get('id') == product.get('id'):
+                if item['product'].get('id') == product.get('id') and item.get('sale_type') == self.sale_type:
                     item['quantity'] += 1
                     self.update_cart_display()
                     return
-
             # Add new item to cart
             self.cart.append({
                 'product': product,
-                'quantity': 1
+                'quantity': 1,
+                'sale_type': self.sale_type
             })
             self.update_cart_display()
         except Exception as e:
@@ -344,47 +380,36 @@ class RecordSale:
             if not self.cart:
                 show_error(self.LANGUAGES[self.current_language].get("empty_cart", "Cart is empty"), self.current_language)
                 return
-
-            # Create sale record
             sale = {
                 'id': get_next_id('sales'),
                 'items': self.cart,
                 'total': sum(float(item['product'].get('price', 0)) * item['quantity'] for item in self.cart),
                 'date': str(datetime.now())
             }
-            
-            # Save sale
             sales = load_data("sales") or []
             sales.append(sale)
             save_data("sales", sales)
-            
-            # Update inventory - ensure quantity is a number before subtracting
             inventory_updated = False
-            products_to_update = load_data("products") or [] # Load current products for inventory update
-
+            products_to_update = load_data("products") or []
             for item in self.cart:
-                 # Find the product in the current products list to update its quantity
                 for product in products_to_update:
-                     if product.get('id') == item['product'].get('id'):
-                         # Ensure quantity is a number before subtracting
-                         current_quantity = product.get('quantity', 0)
-                         if isinstance(current_quantity, (int, float)):
-                            product['quantity'] = current_quantity - item['quantity']
-                            inventory_updated = True
-                            break
-                         else:
-                            show_error(f"Error updating inventory: Invalid quantity for product {product.get('name','')}", self.current_language)
-                            # Optionally, decide whether to proceed with the sale if inventory update fails for one item
-                            # For now, let's just log the error and continue with other items
-
+                    if product.get('id') == item['product'].get('id'):
+                        if item.get('sale_type') == 'wholesale':
+                            current_quantity = product.get('quantity', 0)
+                            if isinstance(current_quantity, (int, float)):
+                                product['quantity'] = current_quantity - item['quantity']
+                                inventory_updated = True
+                        elif item.get('sale_type') == 'retail':
+                            current_quantity = product.get('retail_quantity', 0)
+                            if isinstance(current_quantity, (int, float)):
+                                product['retail_quantity'] = current_quantity - item['quantity']
+                                inventory_updated = True
+                        break
             if inventory_updated:
-                 save_data("products", products_to_update) # Save the updated products list back to database
-
-            # Clear cart and show success message
+                save_data("products", products_to_update)
             self.cart = []
             self.update_cart_display()
             show_success(self.LANGUAGES[self.current_language].get("sale_recorded", "Sale recorded successfully"), self.current_language)
-
         except Exception as e:
             show_error(f"Error processing checkout: {str(e)}", self.current_language)
 
@@ -393,7 +418,6 @@ class RecordSale:
         barcode = self.barcode_entry.get().strip()
         if not barcode:
             return
-        # ابحث عن المنتج بالباركود
         found_product = None
         for product in self.products:
             if str(product.get('barcode', '')).strip() == barcode:
@@ -405,3 +429,6 @@ class RecordSale:
         else:
             show_error(self.LANGUAGES[self.current_language].get("product_not_found", "Product not found"), self.current_language)
             self.barcode_entry.delete(0, 'end')
+
+    def set_sale_type(self, sale_type):
+        self.sale_type = sale_type

@@ -61,6 +61,7 @@ class MainMenu:
         menu_items = [
             ("manage_products", "Manage Products", self.callbacks['manage_products'], "📦"),
             ("manage_inventory", "Manage Inventory", self.callbacks['manage_inventory'], "📊"),
+            ("manage_store", "Manage Store", self.callbacks['manage_store'], "🏪"),
             ("record_sale", "Record Sale", self.callbacks['record_sale'], "💰"),
             ("view_sales", "View Sales Records", self.callbacks['view_sales'], "📈"),
             ("manage_suppliers", "Manage Suppliers", self.callbacks['manage_suppliers'], "🤝"),

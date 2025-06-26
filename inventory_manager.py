@@ -16,6 +16,7 @@ class InventoryManager:
         self.back_callback = back_callback
         self.inventory = load_data("inventory") or []
         self.selected_items = set()
+        self.selected_store = "All Stores"  # المخزن المحدد للفلترة
 
     def refresh_inventory(self):
         """Refresh the inventory list from database and update display"""
@@ -116,6 +117,32 @@ class InventoryManager:
         search_frame = create_styled_frame(main_frame, style='card')
         search_frame.pack(fill='x', padx=20, pady=(0, 20))
         
+        # فلترة حسب المخزن
+        filter_label = create_styled_label(
+            search_frame,
+            text=self.get_bilingual("filter_by_store", "Filter by Store", "تصفية حسب المخزن"),
+            style='subheading'
+        )
+        filter_label.pack(side='left', padx=20, pady=20)
+        
+        # قائمة المخازن المتاحة
+        store_names = self.get_store_names()
+        self.store_filter = create_styled_option_menu(
+            search_frame,
+            values=["All Stores"] + store_names
+        )
+        self.store_filter.set(self.selected_store)
+        self.store_filter.pack(side='left', padx=20, pady=20)
+        
+        # زر تطبيق الفلتر
+        apply_filter_button = create_styled_button(
+            search_frame,
+            text=self.get_bilingual("apply_filter", "Apply Filter", "تطبيق الفلتر"),
+            style='outline',
+            command=self.apply_store_filter
+        )
+        apply_filter_button.pack(side='left', padx=20, pady=20)
+        
         search_entry = create_styled_entry(
             search_frame,
             placeholder_text=self.get_bilingual("search_inventory", "Search inventory...", "بحث في المخزون")
@@ -173,7 +200,12 @@ class InventoryManager:
             header.grid(row=0, column=i, padx=10, pady=10, sticky='w')
         
         # Inventory list
-        for i, item in enumerate(self.inventory, 1):
+        # فلترة المنتجات حسب المخزن المحدد
+        filtered_inventory = self.inventory
+        if self.selected_store != "All Stores":
+            filtered_inventory = [item for item in self.inventory if item.get('location', '') == self.selected_store]
+        
+        for i, item in enumerate(filtered_inventory, 1):
             # Checkbox لتحديد العنصر
             var = ctk.BooleanVar()
             checkbox = ctk.CTkCheckBox(
@@ -242,70 +274,67 @@ class InventoryManager:
             delete_button.pack(side='left', padx=5)
 
     def add_item(self):
-        """Add a new inventory item"""
-        # Create a new window for adding item
+        """Add a new inventory item (اختيار من المنتجات المعرفة فقط)"""
         dialog = ctk.CTkToplevel(self.root)
         dialog.title(self.get_bilingual("add_item", "Add Item", "إضافة عنصر"))
-        dialog.geometry("400x500")
+        dialog.geometry("400x600")
         
-        # Create scrollable frame for the form content
         scrollable_form_frame = ctk.CTkScrollableFrame(dialog, orientation='vertical')
         scrollable_form_frame.pack(fill='both', expand=True, padx=20, pady=20)
-
-        # Item form
-        form_frame = create_styled_frame(scrollable_form_frame, style='card') # Use styled frame inside scrollable
-        form_frame.pack(fill='both', expand=True) # Removed padx, pady as they are on the scrollable frame
+        form_frame = create_styled_frame(scrollable_form_frame, style='card')
+        form_frame.pack(fill='both', expand=True)
         
-        # Name
-        name_label = create_styled_label(
-            form_frame,
-            text=self.get_bilingual("item_name", "Item Name", "اسم العنصر"),
-            style='subheading'
-        )
-        name_label.pack(pady=(20, 5))
+        # تحميل المنتجات المعرفة
+        products = load_data("products") or []
+        product_names = [p['name'] for p in products]
         
-        name_entry = create_styled_entry(form_frame)
-        name_entry.pack(fill='x', padx=20, pady=(0, 15))
+        # اختيار المنتج فقط (بدون إدخال يدوي)
+        product_label = create_styled_label(form_frame, text=self.get_bilingual("product_name", "Product Name", "اسم المنتج"), style='subheading')
+        product_label.pack(pady=(20, 5))
+        product_menu = create_styled_option_menu(form_frame, values=product_names)
+        product_menu.pack(fill='x', padx=20, pady=(0, 15))
         
-        # Category
-        category_label = create_styled_label(
-            form_frame,
-            text=self.get_bilingual("category", "Category", "الفئة"),
-            style='subheading'
-        )
-        category_label.pack(pady=(0, 5))
+        # مواصفات المنتج (للقراءة فقط)
+        type_label = create_styled_label(form_frame, text=self.get_bilingual("product_type", "Type", "نوع المنتج"), style='subheading')
+        type_label.pack(pady=(0, 5))
+        type_value = create_styled_label(form_frame, text="-", style='body')
+        type_value.pack(fill='x', padx=20, pady=(0, 10))
+        flavor_label = create_styled_label(form_frame, text=self.get_bilingual("product_flavor", "Flavor", "نكهة المنتج"), style='subheading')
+        flavor_label.pack(pady=(0, 5))
+        flavor_value = create_styled_label(form_frame, text="-", style='body')
+        flavor_value.pack(fill='x', padx=20, pady=(0, 10))
+        weight_label = create_styled_label(form_frame, text=self.get_bilingual("product_weight", "Weight", "وزن المنتج"), style='subheading')
+        weight_label.pack(pady=(0, 5))
+        weight_value = create_styled_label(form_frame, text="-", style='body')
+        weight_value.pack(fill='x', padx=20, pady=(0, 10))
+        barcode_label = create_styled_label(form_frame, text=self.get_bilingual("barcode", "Barcode", "باركود"), style='subheading')
+        barcode_label.pack(pady=(0, 5))
+        barcode_value = create_styled_label(form_frame, text="-", style='body')
+        barcode_value.pack(fill='x', padx=20, pady=(0, 10))
+        # عند اختيار منتج، اعرض المواصفات
+        def on_product_select(value):
+            selected = next((p for p in products if p['name'] == value), None)
+            if selected:
+                type_value.configure(text=selected.get('type', '-'))
+                flavor_value.configure(text=selected.get('flavor', '-'))
+                weight_value.configure(text=selected.get('weight', '-'))
+                barcode_value.configure(text=selected.get('barcode', '-'))
+        product_menu.configure(command=on_product_select)
         
-        category_entry = create_styled_entry(form_frame)
-        category_entry.pack(fill='x', padx=20, pady=(0, 15))
-        
-        # Quantity
-        quantity_label = create_styled_label(
-            form_frame,
-            text=self.get_bilingual("quantity", "Quantity", "الكمية"),
-            style='subheading'
-        )
+        # الكمية
+        quantity_label = create_styled_label(form_frame, text=self.get_bilingual("quantity", "Quantity", "الكمية"), style='subheading')
         quantity_label.pack(pady=(0, 5))
-        
         quantity_entry = create_styled_entry(form_frame)
         quantity_entry.pack(fill='x', padx=20, pady=(0, 15))
         
-        # Min Quantity
-        min_quantity_label = create_styled_label(
-            form_frame,
-            text=self.get_bilingual("min_quantity", "Min Quantity", "الكمية الصغرى"),
-            style='subheading'
-        )
+        # الكمية الصغرى
+        min_quantity_label = create_styled_label(form_frame, text=self.get_bilingual("min_quantity", "Min Quantity", "الكمية الصغرى"), style='subheading')
         min_quantity_label.pack(pady=(0, 5))
-        
         min_quantity_entry = create_styled_entry(form_frame)
         min_quantity_entry.pack(fill='x', padx=20, pady=(0, 15))
         
-        # Location
-        location_label = create_styled_label(
-            form_frame,
-            text=self.get_bilingual("location", "Location", "الموقع"),
-            style='subheading'
-        )
+        # الموقع
+        location_label = create_styled_label(form_frame, text=self.get_bilingual("location", "Location", "الموقع"), style='subheading')
         location_label.pack(pady=(0, 5))
         import json, os
         stores_file = os.path.join("excel_data", "stores.json")
@@ -314,21 +343,18 @@ class InventoryManager:
             with open(stores_file, 'r', encoding='utf-8') as f:
                 stores = json.load(f)
                 store_names += [store['name'] for store in stores]
-        location_menu = create_styled_option_menu(
-            form_frame,
-            values=store_names
-        )
+        location_menu = create_styled_option_menu(form_frame, values=store_names)
         location_menu.pack(fill='x', padx=20, pady=(0, 15))
         
-        # Save button
+        # زر الحفظ
         save_button = create_styled_button(
             form_frame,
             text=self.get_bilingual("save", "Save", "حفظ"),
             style='primary',
             command=lambda: self.save_item(
                 dialog,
-                name_entry.get(),
-                category_entry.get(),
+                product_menu.get(),
+                type_value.cget('text'),
                 int(quantity_entry.get() or 0),
                 int(min_quantity_entry.get() or 0),
                 location_menu.get()
@@ -529,3 +555,13 @@ class InventoryManager:
         self.selected_items.clear()
         show_success(self.get_bilingual("items_deleted", "Selected items deleted successfully", "تم حذف العناصر المحددة بنجاح"), self.current_language)
         self.refresh_inventory()
+
+    def apply_store_filter(self):
+        """Apply the selected store filter"""
+        selected_store = self.store_filter.get()
+        if selected_store == "All Stores":
+            self.selected_store = "All Stores"
+            self.refresh_inventory()
+        else:
+            self.selected_store = selected_store
+            self.refresh_inventory()
