@@ -1,5 +1,6 @@
 import customtkinter as ctk
 from main_menu import MainMenu
+from cashier_menu import CashierMenu
 from inventory_manager import InventoryManager
 from product_manager import ProductManager
 from accounts_receivable import RecordSale
@@ -42,7 +43,16 @@ class HookahShopApp:
                 "settings": "Settings",
                 "logout": "Logout",
                 "manage_customers": "Manage Customers",
-                "reporting_analytics": "Reporting and Analytics"
+                "reporting_analytics": "Reporting and Analytics",
+                "admin_account": "Admin Account",
+                "cashier_account": "Cashier Account",
+                "select_account_type": "Select Account Type",
+                "admin_login": "Admin Login",
+                "cashier_login": "Cashier Login",
+                "invalid_credentials": "Invalid credentials",
+                "enter_credentials": "Please enter both username and password",
+                "today_stats": "Today's Statistics",
+                "sales": "Sales"
             },
             "ar": {
                 "login": "تسجيل الدخول",
@@ -61,15 +71,24 @@ class HookahShopApp:
                 "settings": "الإعدادات",
                 "logout": "تسجيل خروج",
                 "manage_customers": "إدارة الزبائن",
-                "reporting_analytics": "التقارير والتحليلات"
+                "reporting_analytics": "التقارير والتحليلات",
+                "admin_account": "حساب الإدارة",
+                "cashier_account": "حساب الكاشير",
+                "select_account_type": "اختر نوع الحساب",
+                "admin_login": "تسجيل دخول الإدارة",
+                "cashier_login": "تسجيل دخول الكاشير",
+                "invalid_credentials": "بيانات غير صحيحة",
+                "enter_credentials": "يرجى إدخال اسم المستخدم وكلمة المرور",
+                "today_stats": "إحصائيات اليوم",
+                "sales": "المبيعات"
             }
         }
         
         # Initialize screens
         self.initialize_screens()
         
-        # Show login screen
-        self.show_login()
+        # Show account selection screen
+        self.show_account_selection()
     
     def initialize_screens(self):
         """Initialize all screens and their callbacks"""
@@ -102,32 +121,88 @@ class HookahShopApp:
         self.expenses_bills = ExpensesBillsManager(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
         self.notifications_manager = NotificationsManager(self.root, self.current_language, self.LANGUAGES, self.show_main_menu, self.callbacks)
         self.main_menu = MainMenu(self.root, self.current_language, self.LANGUAGES, self.callbacks)
+        self.cashier_menu = CashierMenu(self.root, self.current_language, self.LANGUAGES, self.callbacks)
     
     def get_bilingual(self, key, default_en, default_ar):
         en = self.LANGUAGES['en'].get(key, default_en)
         ar = self.LANGUAGES['ar'].get(key, default_ar)
         return f"{en} / {ar}"
     
-    def show_login(self):
-        """Show the login screen"""
+    def show_account_selection(self):
+        """Show account type selection screen"""
         # Clear current frame
         for widget in self.root.winfo_children():
             widget.destroy()
         
-        # Login Frame (styled as a card)
-        login_frame = create_styled_frame(self.root, style='card', width=400, height=450)
-        login_frame.place(relx=0.5, rely=0.5, anchor='center') # Use place for centering
+        # Main container
+        main_frame = create_styled_frame(self.root, style='section')
+        main_frame.pack(fill='both', expand=True)
         
-        # Title Label
+        # Title
         title_label = create_styled_label(
             self.root,
             text=self.get_bilingual("welcome", "Welcome to Hookah Shop Management System", "مرحباً بك في نظام إدارة متجر الشيشة"),
             style='heading'
         )
         title_label.pack(pady=40)
+        
+        # Account type selection frame
+        selection_frame = create_styled_frame(main_frame, style='card', width=600, height=400)
+        selection_frame.place(relx=0.5, rely=0.5, anchor='center')
+        
+        # Selection title
+        selection_title = create_styled_label(
+            selection_frame,
+            text=self.get_bilingual("select_account_type", "Select Account Type", "اختر نوع الحساب"),
+            style='subheading'
+        )
+        selection_title.pack(pady=30)
+        
+        # Admin account button
+        admin_button = create_styled_button(
+            selection_frame,
+            text=f"👨‍💼 {self.get_bilingual('admin_account', 'Admin Account', 'حساب الإدارة')}",
+            style='primary',
+            command=lambda: self.show_login('admin'),
+            height=60,
+            width=300
+        )
+        admin_button.pack(pady=20)
+        
+        # Cashier account button
+        cashier_button = create_styled_button(
+            selection_frame,
+            text=f"💼 {self.get_bilingual('cashier_account', 'Cashier Account', 'حساب الكاشير')}",
+            style='secondary',
+            command=lambda: self.show_login('cashier'),
+            height=60,
+            width=300
+        )
+        cashier_button.pack(pady=20)
+    
+    def show_login(self, account_type):
+        """Show the login screen for specific account type"""
+        self.current_account_type = account_type
+        
+        # Clear current frame
+        for widget in self.root.winfo_children():
+            widget.destroy()
+        
+        # Login Frame (styled as a card)
+        login_frame = create_styled_frame(self.root, style='card', width=400, height=450)
+        login_frame.place(relx=0.5, rely=0.5, anchor='center')
+        
+        # Title Label
+        title_text = self.get_bilingual("admin_login", "Admin Login", "تسجيل دخول الإدارة") if account_type == 'admin' else self.get_bilingual("cashier_login", "Cashier Login", "تسجيل دخول الكاشير")
+        title_label = create_styled_label(
+            self.root,
+            text=title_text,
+            style='heading'
+        )
+        title_label.pack(pady=40)
 
         # Input fields frame (inside the card)
-        input_frame = create_styled_frame(login_frame, style='card') # Inner frame within the card
+        input_frame = create_styled_frame(login_frame, style='card')
         input_frame.pack(padx=30, pady=30, fill="both", expand=True)
 
         # Username
@@ -158,26 +233,56 @@ class HookahShopApp:
             command=lambda: self.process_login(username_entry.get(), password_entry.get())
         )
         submit_button.pack(pady=20)
+        
+        # Back button
+        back_button = create_styled_button(
+            input_frame,
+            text=self.get_bilingual("back", "Back", "رجوع"),
+            style='outline',
+            command=self.show_account_selection
+        )
+        back_button.pack(pady=10)
     
     def process_login(self, username, password):
         """Process login attempt"""
-        # For now, allow any non-empty credentials
-        if username and password:
-            self.show_main_menu()
-        else:
-            ctk.messagebox.showerror(
-                self.get_bilingual("error", "Error", "خطأ"),
-                "Please enter both username and password"
-            )
+        # تحقق فعلي من بيانات الدخول
+        valid_credentials = {
+            'admin': {'username': 'admin', 'password': 'admin123'},
+            'cashier': {'username': 'cashier', 'password': 'cashier123'}
+        }
+        account_type = getattr(self, 'current_account_type', None)
+        if account_type in valid_credentials:
+            creds = valid_credentials[account_type]
+            if username == creds['username'] and password == creds['password']:
+                self.show_main_menu()
+                return
+            else:
+                ctk.messagebox.showerror(
+                    self.get_bilingual("error", "Error", "خطأ"),
+                    self.get_bilingual("invalid_credentials", "Invalid credentials", "بيانات غير صحيحة")
+                )
+                return
+        # في حال لم يتم اختيار نوع الحساب أو بيانات غير مكتملة
+        ctk.messagebox.showerror(
+            self.get_bilingual("error", "Error", "خطأ"),
+            self.get_bilingual("enter_credentials", "Please enter both username and password", "يرجى إدخال اسم المستخدم وكلمة المرور")
+        )
     
     def show_main_menu(self):
-        """Show the main menu"""
+        """Show the main menu based on account type"""
         # Clear current frame
         for widget in self.root.winfo_children():
             widget.destroy()
         
-        # Show main menu
-        self.main_menu.create_main_menu()
+        # Show appropriate menu based on account type
+        if hasattr(self, 'current_account_type') and self.current_account_type == 'cashier':
+            self.show_cashier_menu()
+        else:
+            self.main_menu.create_main_menu()
+    
+    def show_cashier_menu(self):
+        """Show cashier-specific menu with sales functionality"""
+        self.cashier_menu.create_cashier_menu()
     
     def show_product_manager(self):
         """Show the product manager screen"""
@@ -189,10 +294,20 @@ class HookahShopApp:
     
     def show_record_sale(self):
         """Show the record sale screen"""
+        # Set the back callback based on account type
+        if hasattr(self, 'current_account_type') and self.current_account_type == 'cashier':
+            self.record_sale.back_callback = self.show_cashier_menu
+        else:
+            self.record_sale.back_callback = self.show_main_menu
         self.record_sale.record_sale()
     
     def show_sales_records(self):
         """Show the sales records screen"""
+        # Set the back callback based on account type
+        if hasattr(self, 'current_account_type') and self.current_account_type == 'cashier':
+            self.view_sales.back_callback = self.show_cashier_menu
+        else:
+            self.view_sales.back_callback = self.show_main_menu
         self.view_sales.view_sales()
     
     def show_suppliers(self):
@@ -226,7 +341,7 @@ class HookahShopApp:
     
     def logout(self):
         """Logout and return to login screen"""
-        self.show_login()
+        self.show_account_selection()
     
     def switch_language(self, language):
         """Switch the application language"""

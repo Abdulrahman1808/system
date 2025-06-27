@@ -59,7 +59,7 @@ class RecordSale:
                             
                             # Image display
                             image_path = product.get('image_path')
-                            if image_path and os.path.exists(image_path):
+                            if isinstance(image_path, str) and image_path and os.path.exists(image_path):
                                 try:
                                     img = Image.open(image_path)
                                     img.thumbnail((50, 50)) # Resize for list view
@@ -273,18 +273,21 @@ class RecordSale:
         search_frame = create_styled_frame(left_frame, style='card')
         search_frame.pack(fill='x', padx=20, pady=(0, 20))
         
+        self.search_var = ctk.StringVar()
         search_entry = create_styled_entry(
             search_frame,
-            placeholder_text=self.LANGUAGES[self.current_language].get("search_products", "Search products...")
+            placeholder_text=self.LANGUAGES[self.current_language].get("search_products", "Search products..."),
+            textvariable=self.search_var
         )
         search_entry.pack(side='left', padx=20, pady=20, fill='x', expand=True)
+        self.search_var.trace_add('write', lambda *args: self.filter_products())
         
         # Products list
         self.products_frame = ctk.CTkScrollableFrame(left_frame, orientation='vertical')
         self.products_frame.pack(fill='both', expand=True, padx=20, pady=(0, 20))
         
-        # Initial display of products - now happens after frame creation
-        self.refresh_products()
+        # عرض كل المنتجات مباشرة عند فتح الشاشة
+        self.filter_products()
         
         # Right side - Shopping cart
         right_frame = create_styled_frame(content_frame, style='card')
@@ -381,14 +384,14 @@ class RecordSale:
                 show_error(self.LANGUAGES[self.current_language].get("empty_cart", "Cart is empty"), self.current_language)
                 return
             sale = {
-                'id': get_next_id('sales'),
+                'id': get_next_id('sales_journal'),
                 'items': self.cart,
                 'total': sum(float(item['product'].get('price', 0)) * item['quantity'] for item in self.cart),
                 'date': str(datetime.now())
             }
-            sales = load_data("sales") or []
+            sales = load_data("sales_journal") or []
             sales.append(sale)
-            save_data("sales", sales)
+            save_data("sales_journal", sales)
             inventory_updated = False
             products_to_update = load_data("products") or []
             for item in self.cart:
@@ -432,3 +435,73 @@ class RecordSale:
 
     def set_sale_type(self, sale_type):
         self.sale_type = sale_type
+
+    def filter_products(self):
+        """تصفية المنتجات حسب البحث أو عرض الكل إذا كان الحقل فارغاً"""
+        query = self.search_var.get().strip().lower()
+        all_products = load_data("products") or []
+        print(f"[DEBUG] Loaded {len(all_products)} products: {[p.get('name') for p in all_products]}")
+        filtered = all_products
+        if query:
+            filtered = [p for p in filtered if query in str(p.get('name', '')).lower() or query in str(p.get('barcode', '')).lower()]
+        self.products = filtered
+        if hasattr(self, 'products_frame') and self.products_frame.winfo_exists():
+            for widget in self.products_frame.winfo_children():
+                widget.destroy()
+            if not self.products:
+                no_products_label = create_styled_label(
+                    self.products_frame,
+                    text=self.LANGUAGES[self.current_language].get("no_active_products", "No products found."),
+                    style='body'
+                )
+                no_products_label.pack(pady=20)
+            else:
+                for product in self.products:
+                    try:
+                        product_frame = create_styled_frame(self.products_frame, style='card')
+                        product_frame.pack(fill='x', padx=10, pady=5)
+                        image_path = product.get('image_path')
+                        if isinstance(image_path, str) and image_path and os.path.exists(image_path):
+                            try:
+                                img = Image.open(image_path)
+                                img.thumbnail((50, 50))
+                                img_tk = ctk.CTkImage(light_image=img, dark_image=img, size=(50, 50))
+                                image_label = ctk.CTkLabel(product_frame, image=img_tk, text="")
+                                image_label.image = img_tk
+                            except Exception as e:
+                                image_label = create_styled_label(product_frame, text=self.LANGUAGES[self.current_language].get("error_loading_image", "Error loading image"), style='small')
+                        else:
+                            image_label = create_styled_label(product_frame, text=self.LANGUAGES[self.current_language].get("no_image", "No Image"), style='small')
+                        image_label.pack(side='left', padx=10, pady=5)
+                        details_frame = create_styled_frame(product_frame, style='card')
+                        details_frame.pack(side='left', fill='x', expand=True, padx=(0, 10), pady=10)
+                        name_label = create_styled_label(
+                            details_frame,
+                            text=product.get('name', ''),
+                            style='subheading'
+                        )
+                        name_label.pack(side='left', padx=10)
+                        qty_text = f" | {self.LANGUAGES[self.current_language].get('wholesale_quantity', 'Wholesale Qty')}: {product.get('quantity', 0)}"
+                        qty_text += f" | {self.LANGUAGES[self.current_language].get('retail_quantity', 'Retail Qty')}: {product.get('retail_quantity', 0)}"
+                        qty_label = create_styled_label(
+                            details_frame,
+                            text=qty_text,
+                            style='small'
+                        )
+                        qty_label.pack(side='left', padx=10)
+                        price_label = create_styled_label(
+                            details_frame,
+                            text=f"${float(product.get('price', 0) or 0):.2f}",
+                            style='body'
+                        )
+                        price_label.pack(side='left', padx=10)
+                        add_button = create_styled_button(
+                            product_frame,
+                            text=self.LANGUAGES[self.current_language].get("add_to_cart", "Add to Cart"),
+                            style='primary',
+                            width=120,
+                            command=lambda p=product: self.add_to_cart(p)
+                        )
+                        add_button.pack(side='right', padx=10, pady=10)
+                    except Exception as e:
+                        print(f"[DEBUG] Error adding product: {e}")
