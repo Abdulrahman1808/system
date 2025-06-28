@@ -1,4 +1,5 @@
 import customtkinter as ctk
+import tkinter.messagebox as messagebox
 from main_menu import MainMenu
 from cashier_menu import CashierMenu
 from inventory_manager import InventoryManager
@@ -113,6 +114,7 @@ class HookahShopApp:
         self.record_sale = RecordSale(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
         self.product_manager = ProductManager(self.root, self.current_language, self.LANGUAGES, self.show_main_menu, record_sale_instance=self.record_sale)
         self.inventory_manager = InventoryManager(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
+        self.store_manager = None  # سننشئه عند الحاجة
         self.view_sales = ViewSalesRecords(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
         self.manage_suppliers = ManageSuppliers(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
         self.manage_employees = ManageEmployees(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
@@ -257,13 +259,13 @@ class HookahShopApp:
                 self.show_main_menu()
                 return
             else:
-                ctk.messagebox.showerror(
+                messagebox.showerror(
                     self.get_bilingual("error", "Error", "خطأ"),
                     self.get_bilingual("invalid_credentials", "Invalid credentials", "بيانات غير صحيحة")
                 )
                 return
         # في حال لم يتم اختيار نوع الحساب أو بيانات غير مكتملة
-        ctk.messagebox.showerror(
+        messagebox.showerror(
             self.get_bilingual("error", "Error", "خطأ"),
             self.get_bilingual("enter_credentials", "Please enter both username and password", "يرجى إدخال اسم المستخدم وكلمة المرور")
         )
@@ -351,8 +353,11 @@ class HookahShopApp:
     
     def show_store_manager(self):
         from store_manager import StoreManager
-        store_manager = StoreManager(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
-        store_manager.manage_store()
+        if not self.store_manager:
+            self.store_manager = StoreManager(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
+            # اربط شاشة المخزون بشاشة المحل
+            self.inventory_manager.store_manager_instance = self.store_manager
+        self.store_manager.manage_store()
 
 if __name__ == "__main__":
     root = ctk.CTk()

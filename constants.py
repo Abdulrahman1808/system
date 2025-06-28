@@ -35,7 +35,8 @@ EXCEL_FILES = {
     "accounts_receivable": os.path.join(EXCEL_DATA_PATH, "accounts_receivable.xlsx"),
     "accounts_payable": os.path.join(EXCEL_DATA_PATH, "accounts_payable.xlsx"),
     "employees": os.path.join(EXCEL_DATA_PATH, "hookah_employees.xlsx"),
-    "store_products": os.path.join(EXCEL_DATA_PATH, "hookah_store_products.xlsx")
+    "store_products": os.path.join(EXCEL_DATA_PATH, "hookah_store_products.xlsx"),
+    "customers": os.path.join(EXCEL_DATA_PATH, "customers.xlsx")
 }
 
 # MongoDB configuration
@@ -113,7 +114,6 @@ LANGUAGES = {
         "position": "Position",
         "hire_date": "Hire Date",
         "worker_added": "Worker {} added successfully",
-        "ai_assistant": "AI Assistant",
         "import_excel": "Import Excel Data",
         "import_success": "Excel data imported successfully",
         "import_fail": "Failed to import Excel data",
@@ -197,7 +197,6 @@ LANGUAGES = {
         "position": "المنصب",
         "hire_date": "تاريخ التوظيف",
         "worker_added": "تمت إضافة العامل {} بنجاح",
-        "ai_assistant": "مساعد الذكاء الاصطناعي",
         "import_excel": "استيراد بيانات إكسل",
         "import_success": "تم استيراد بيانات إكسل بنجاح",
         "import_fail": "فشل في استيراد بيانات إكسل",

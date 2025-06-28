@@ -86,8 +86,8 @@ def load_data(data_type):
             
             # Save to JSON file for backup
             filename = os.path.join(MONGODB_DATA_PATH, f"{MONGODB_COLLECTIONS[data_type]}.json")
-            with open(filename, 'w') as f:
-                json.dump(data, f, indent=4)
+            with open(filename, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
             print(f"[DEBUG] Saved {len(data)} items to {filename}")
             
             # Export to Excel for consistency
@@ -98,7 +98,7 @@ def load_data(data_type):
             # If MongoDB is not available, try to load from JSON
             filename = os.path.join(MONGODB_DATA_PATH, f"{MONGODB_COLLECTIONS[data_type]}.json")
             if os.path.exists(filename):
-                with open(filename, 'r') as f:
+                with open(filename, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                 print(f"[DEBUG] Loaded {len(data)} items from {filename}")
                 
@@ -114,12 +114,33 @@ def load_data(data_type):
                 excel_path = EXCEL_FILES[data_type]
                 if os.path.exists(excel_path):
                     print(f"[DEBUG] Loading from Excel: {excel_path}")
-                    df = pd.read_excel(excel_path)
+                    if data_type == 'customers':
+                        df = pd.read_excel(excel_path)
+                        excel_to_program = {
+                            "رقم العميل": "id",
+                            "اسم العميل": "name",
+                            "فئة العميل": "category",
+                            "العنوان": "address",
+                            "تليفون 1": "phone1",
+                            "تليفون 2": "phone2",
+                            "عملة الحساب": "currency",
+                            "المدينة": "city",
+                            "المحافظة": "governorate",
+                            "الدولة": "country",
+                            "المندوب": "representative",
+                            "ملاحظات": "notes"
+                        }
+                        df = df.rename(columns=excel_to_program)
+                        needed_fields = list(excel_to_program.values())
+                        df = df[needed_fields]
+                    else:
+                        df = pd.read_excel(excel_path)
                     data = df.to_dict('records')
+                    print("[DEBUG] Imported customer data (first 3):", data[:3])
                     
                     # Save to JSON for future use
-                    with open(filename, 'w') as f:
-                        json.dump(data, f, indent=4)
+                    with open(filename, 'w', encoding='utf-8') as f:
+                        json.dump(data, f, indent=4, ensure_ascii=False)
                     print(f"[DEBUG] Saved {len(data)} items to {filename}")
                     
                     return data
@@ -150,11 +171,21 @@ def save_data(data_type, data):
             ensure_collection(MONGODB_COLLECTIONS[data_type])
             print(f"[DEBUG] Ensured collection exists: {MONGODB_COLLECTIONS[data_type]}")
 
+        # Create a copy of data for JSON serialization
+        json_data = []
+        for item in data:
+            item_copy = item.copy()
+            # Convert ObjectId to string for JSON serialization
+            if '_id' in item_copy:
+                if hasattr(item_copy['_id'], '__str__'):
+                    item_copy['_id'] = str(item_copy['_id'])
+            json_data.append(item_copy)
+
         # Save to JSON file in MongoDB data path
         filename = os.path.join(MONGODB_DATA_PATH, f"{MONGODB_COLLECTIONS[data_type]}.json")
-        with open(filename, 'w') as f:
-            json.dump(data, f, indent=4)
-        print(f"[DEBUG] Saved {len(data)} items to {filename}")
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(json_data, f, indent=4, ensure_ascii=False)
+        print(f"[DEBUG] Saved {len(json_data)} items to {filename}")
         
         # Save to MongoDB if connection is available
         if db is not None:
@@ -166,22 +197,25 @@ def save_data(data_type, data):
             # Insert new data
             if data:
                 # Convert string IDs back to ObjectId for MongoDB
+                mongo_data = []
                 for item in data:
-                    if '_id' in item and isinstance(item['_id'], str):
+                    item_copy = item.copy()
+                    if '_id' in item_copy and isinstance(item_copy['_id'], str):
                         try:
-                            item['_id'] = ObjectId(item['_id'])
+                            item_copy['_id'] = ObjectId(item_copy['_id'])
                         except:
                             # If conversion fails, remove the _id field to let MongoDB generate a new one
-                            del item['_id']
+                            del item_copy['_id']
+                    mongo_data.append(item_copy)
                 
                 # Insert data in batches to avoid memory issues
                 batch_size = 100
-                for i in range(0, len(data), batch_size):
-                    batch = data[i:i + batch_size]
+                for i in range(0, len(mongo_data), batch_size):
+                    batch = mongo_data[i:i + batch_size]
                     collection.insert_many(batch)
                     print(f"[DEBUG] Inserted batch of {len(batch)} items")
                 
-                print(f"[DEBUG] Saved {len(data)} items to MongoDB {MONGODB_COLLECTIONS[data_type]} collection")
+                print(f"[DEBUG] Saved {len(mongo_data)} items to MongoDB {MONGODB_COLLECTIONS[data_type]} collection")
             else:
                 print("[DEBUG] No data to save to MongoDB")
         
@@ -243,7 +277,7 @@ def merge_excel_data(data_type, excel_data):
         added_count = 0
         
         for excel_item in excel_data:
-            excel_name = excel_item.get('name', '').lower()
+            excel_name = (excel_item.get('name') or '').lower()
             excel_barcode = excel_item.get('barcode', '')
             
             # Check if item exists by name or barcode
@@ -282,6 +316,13 @@ def merge_excel_data(data_type, excel_data):
         print(f"[TRACEBACK] {traceback.format_exc()}")
         return False
 
+def clean_excel_data(data):
+    for row in data:
+        for k, v in row.items():
+            if pd.isna(v):
+                row[k] = None
+    return data
+
 def import_from_excel(data_type):
     """Import data from Excel file and sync with database"""
     if data_type not in EXCEL_FILES:
@@ -315,8 +356,8 @@ def import_from_excel(data_type):
                 df.to_excel(excel_path, index=False)
                 print(f"[DEBUG] Added missing columns to Excel: {missing}")
         data = df.to_dict('records')
+        data = clean_excel_data(data)
         print(f"[DEBUG] Read {len(data)} records from Excel")
-        
         # Merge Excel data with existing data instead of replacing
         if merge_excel_data(data_type, data):
             print(f"[DEBUG] Successfully imported and merged {len(data)} items from Excel")
@@ -480,7 +521,7 @@ def validate_data(data_type, data):
     """Validate data before saving"""
     required_fields = {
         'products': ['name', 'category', 'price', 'quantity', 'status'],
-        'inventory': ['name', 'category', 'quantity', 'min_quantity', 'location'],
+        'inventory': ['name', 'category', 'quantity', 'location'],
         'suppliers': ['name', 'contact', 'email', 'phone', 'status'],
         'sales': ['items', 'total', 'date']
     }

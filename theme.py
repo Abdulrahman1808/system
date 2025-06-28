@@ -203,7 +203,7 @@ def create_styled_label(parent, text, style='body', **kwargs):
     return label
 
 def create_styled_option_menu(parent, values, command=None, **kwargs):
-    """Create a styled option menu with consistent appearance"""
+    """Create a styled option menu with consistent appearance and scrollwheel support"""
     menu = ctk.CTkOptionMenu(parent, values=values, command=command, **kwargs)
     menu.configure(
         fg_color=COLORS['surface'],
@@ -212,6 +212,22 @@ def create_styled_option_menu(parent, values, command=None, **kwargs):
         text_color=COLORS['text'],
         font=FONTS['body']
     )
+    # Add scrollwheel support
+    def on_mousewheel(event):
+        current = menu.get()
+        vals = menu.cget('values')
+        if current not in vals:
+            idx = 0
+        else:
+            idx = vals.index(current)
+        if event.delta > 0:
+            idx = (idx - 1) % len(vals)
+        else:
+            idx = (idx + 1) % len(vals)
+        menu.set(vals[idx])
+        if command:
+            command(vals[idx])
+    menu.bind('<MouseWheel>', on_mousewheel)
     return menu
 
 def create_styled_checkbox(parent, text, command=None, width=None, height=None):

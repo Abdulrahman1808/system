@@ -2,7 +2,7 @@ import customtkinter as ctk
 # Import necessary styled functions from theme
 from theme import create_styled_frame, create_styled_label, create_styled_button, create_styled_entry, COLORS, FONTS
 # Import data handling functions
-from data_handler import load_data, save_data, get_next_id
+from data_handler import load_data, save_data, get_next_id, import_from_excel
 from ui_elements import show_error, show_success
 
 class CustomerManager:
@@ -19,6 +19,9 @@ class CustomerManager:
 
         self.sort_column = 'name' # Default sorting column
         self.sort_order = 'asc' # Default sorting order
+
+        self.PAGE_SIZE = 50
+        self.current_page = 0
 
     def manage_customers(self):
         """Create the customer management interface"""
@@ -59,6 +62,24 @@ class CustomerManager:
             command=self.add_customer
         )
         add_customer_button.pack(side='right', padx=20, pady=20)
+
+        # زر حذف كل العملاء (إداري فقط)
+        delete_all_button = create_styled_button(
+            header_frame,
+            text=self.LANGUAGES[self.current_language].get("delete_all_customers", "Delete All Customers"),
+            style='outline',
+            command=self.delete_all_customers
+        )
+        delete_all_button.pack(side='right', padx=20, pady=20)
+
+        # Refresh Button
+        refresh_button = create_styled_button(
+            header_frame,
+            text=self.LANGUAGES[self.current_language].get("refresh", "Refresh"),
+            style='outline',
+            command=self.refresh_customers
+        )
+        refresh_button.pack(side='right', padx=20, pady=20)
 
         # Search and Filter section
         search_frame = create_styled_frame(self.frame, style='card')
@@ -126,18 +147,23 @@ class CustomerManager:
 
     def display_customers(self, customers_to_display=None):
         """Display the list of customers in the scrollable frame"""
-        # Use the provided list if available, otherwise use the full list
         customer_list = customers_to_display if customers_to_display is not None else self.customers
+        # Pagination
+        total_customers = len(customer_list)
+        total_pages = max(1, (total_customers + self.PAGE_SIZE - 1) // self.PAGE_SIZE)
+        start = self.current_page * self.PAGE_SIZE
+        end = start + self.PAGE_SIZE
+        page_customers = customer_list[start:end]
 
         # Sort the customer list
         if self.sort_column:
-            customer_list = sorted(customer_list, key=lambda x: x.get(self.sort_column, ''), reverse=(self.sort_order == 'desc'))
+            page_customers = sorted(page_customers, key=lambda x: x.get(self.sort_column, ''), reverse=(self.sort_order == 'desc'))
 
         # Clear existing list
         for widget in self.scrollable_customer_list.winfo_children():
             widget.destroy()
 
-        if not customer_list:
+        if not page_customers:
             no_customers_label = create_styled_label(
                 self.scrollable_customer_list,
                 text=self.LANGUAGES[self.current_language].get("no_customers", "No customers found."),
@@ -148,20 +174,28 @@ class CustomerManager:
 
         # Table headers
         headers = [
-            ("name", "Name"),
-            ("contact", "Contact"),
-            ("email", "Email"),
-            ("phone", "Phone"),
-            ("address", "Address"),
-            ("notes", "Notes"),
-            ("actions", "Actions")
+            ("id", "Customer ID", "رقم العميل"),
+            ("name", "Name", "اسم العميل"),
+            ("category", "Category", "فئة العميل"),
+            ("address", "Address", "العنوان"),
+            ("phone1", "Phone 1", "تليفون 1"),
+            ("phone2", "Phone 2", "تليفون 2"),
+            ("local_code", "Local System Code", "الرمز الداخلي - المحلي"),
+            ("old_code", "Old System Code", "الرمز الداخلي - القديم"),
+            ("currency", "Currency", "عملة الحساب"),
+            ("city", "City", "المدينة"),
+            ("governorate", "Governorate", "المحافظة"),
+            ("country", "Country", "الدولة"),
+            ("representative", "Representative", "المندوب"),
+            ("notes", "Notes", "ملاحظات"),
+            ("actions", "Actions", "إجراءات")
         ]
 
         # Add headers to the grid and bind click events
-        for i, (key, default_text) in enumerate(headers):
+        for i, (key, en, ar) in enumerate(headers):
             header = create_styled_label(
                 self.scrollable_customer_list,
-                text=self.get_bilingual(key, default_text, default_text),
+                text=self.get_bilingual(key, en, ar),
                 style='subheading'
             )
             header.grid(row=0, column=i, padx=10, pady=10, sticky='w')
@@ -171,78 +205,62 @@ class CustomerManager:
                 header.configure(cursor="hand2") # Change cursor to indicate it's clickable
 
         # Customer list
-        for i, customer in enumerate(customer_list, 1):
-            # Customer details
-            name_label = create_styled_label(
-                self.scrollable_customer_list,
-                text=customer.get('name', ''),
-                style='body'
-            )
-            name_label.grid(row=i, column=0, padx=10, pady=10, sticky='w')
-
-            contact_label = create_styled_label(
-                self.scrollable_customer_list,
-                text=customer.get('contact', ''),
-                style='body'
-            )
-            contact_label.grid(row=i, column=1, padx=10, pady=10, sticky='w')
-
-            email_label = create_styled_label(
-                self.scrollable_customer_list,
-                text=customer.get('email', ''),
-                style='body'
-            )
-            email_label.grid(row=i, column=2, padx=10, pady=10, sticky='w')
-
-            phone_label = create_styled_label(
-                self.scrollable_customer_list,
-                text=customer.get('phone', ''),
-                style='body'
-            )
-            phone_label.grid(row=i, column=3, padx=10, pady=10, sticky='w')
-
-            # Address
-            address_label = create_styled_label(
-                self.scrollable_customer_list,
-                text=customer.get('address', ''),
-                style='body'
-            )
-            address_label.grid(row=i, column=4, padx=10, pady=10, sticky='w')
-
-            # Notes
-            notes_label = create_styled_label(
-                self.scrollable_customer_list,
-                text=customer.get('notes', ''),
-                style='body'
-            )
-            notes_label.grid(row=i, column=5, padx=10, pady=10, sticky='w')
-
-            # Action buttons (placeholder)
-            actions_frame = create_styled_frame(self.scrollable_customer_list, style='card')
-            actions_frame.grid(row=i, column=6, padx=10, pady=10, sticky='w')
-
-            edit_button = create_styled_button(
-                actions_frame,
-                text=self.LANGUAGES[self.current_language].get("edit", "Edit"),
-                style='outline',
-                width=80,
-                command=lambda c=customer: self.edit_customer(c) # Placeholder
-            )
-            edit_button.pack(side='left', padx=5)
-
-            delete_button = create_styled_button(
-                actions_frame,
-                text=self.LANGUAGES[self.current_language].get("delete", "Delete"),
-                style='outline',
-                width=80,
-                command=lambda c=customer: self.delete_customer(c) # Placeholder
-            )
-            delete_button.pack(side='left', padx=5)
-
+        for i, customer in enumerate(page_customers, 1):
+            for j, (key, en, ar) in enumerate(headers):
+                if key == "actions":
+                    actions_frame = create_styled_frame(self.scrollable_customer_list, style='card')
+                    actions_frame.grid(row=i, column=j, padx=10, pady=10, sticky='w')
+                    edit_button = create_styled_button(
+                        actions_frame,
+                        text=self.LANGUAGES[self.current_language].get("edit", "Edit"),
+                        style='outline',
+                        width=80,
+                        command=lambda c=customer: self.edit_customer(c)
+                    )
+                    edit_button.pack(side='left', padx=5)
+                    delete_button = create_styled_button(
+                        actions_frame,
+                        text=self.LANGUAGES[self.current_language].get("delete", "Delete"),
+                        style='outline',
+                        width=80,
+                        command=lambda c=customer: self.delete_customer(c)
+                    )
+                    delete_button.pack(side='left', padx=5)
+                else:
+                    value = customer.get(key, "")
+                    label = create_styled_label(
+                        self.scrollable_customer_list,
+                        text=value,
+                        style='body'
+                    )
+                    label.grid(row=i, column=j, padx=10, pady=10, sticky='w')
         # Configure column weights so columns expand evenly
         for i in range(len(headers)):
             self.scrollable_customer_list.grid_columnconfigure(i, weight=1)
 
+        # Pagination controls
+        pagination_frame = create_styled_frame(self.scrollable_customer_list, style='card')
+        pagination_frame.grid(row=len(page_customers)+2, column=0, columnspan=len(headers), pady=10)
+        prev_button = create_styled_button(
+            pagination_frame,
+            text=self.LANGUAGES[self.current_language].get("previous", "Previous"),
+            style='outline',
+            command=self.go_to_previous_page
+        )
+        prev_button.pack(side='left', padx=10)
+        page_label = create_styled_label(
+            pagination_frame,
+            text=f"{self.current_page+1} / {total_pages}",
+            style='body'
+        )
+        page_label.pack(side='left', padx=10)
+        next_button = create_styled_button(
+            pagination_frame,
+            text=self.LANGUAGES[self.current_language].get("next", "Next"),
+            style='outline',
+            command=self.go_to_next_page
+        )
+        next_button.pack(side='left', padx=10)
 
     def add_customer(self):
         """Open dialog to add a new customer"""
@@ -268,22 +286,54 @@ class CustomerManager:
         )
         title_label.pack(pady=20)
 
-        # Input fields
+        # Input fields (add_customer)
         fields = [
-            ("name", "Name"),
-            ("contact", "Contact Person"),
-            ("email", "Email"),
-            ("phone", "Phone Number"),
-            ("address", "Address"),
-            ("notes", "Notes")
+            ("id", "Customer ID", "رقم العميل"),
+            ("name", "Name", "اسم العميل"),
+            ("category", "Category", "فئة العميل"),
+            ("address", "Address", "العنوان"),
+            ("phone1", "Phone 1", "تليفون 1"),
+            ("phone2", "Phone 2", "تليفون 2"),
+            ("local_code", "Local System Code", "الرمز الداخلي - المحلي"),
+            ("old_code", "Old System Code", "الرمز الداخلي - القديم"),
+            ("currency", "Currency", "عملة الحساب"),
+            ("city", "City", "المدينة"),
+            ("governorate", "Governorate", "المحافظة"),
+            ("country", "Country", "الدولة"),
+            ("representative", "Representative", "المندوب"),
+            ("notes", "Notes", "ملاحظات")
         ]
 
         self.add_customer_entries = {} # Store entry widgets
 
-        for key, text in fields:
-            label = create_styled_label(form_frame, text=self.get_bilingual(key, text, text), style='subheading')
+        # Dropdown values
+        category_options = [
+            self.get_bilingual("category_cash", "Cash Customer", "عميل نقدي"),
+            self.get_bilingual("category_credit", "Credit Customer", "عميل بالأجل")
+        ]
+        governorate_options = [
+            self.get_bilingual(None, en, ar) for ar, en in [
+                ("القاهرة", "Cairo"), ("الجيزة", "Giza"), ("الإسكندرية", "Alexandria"), ("الدقهلية", "Dakahlia"),
+                ("البحر الأحمر", "Red Sea"), ("البحيرة", "Beheira"), ("الفيوم", "Fayoum"), ("الغربية", "Gharbia"),
+                ("الإسماعيلية", "Ismailia"), ("المنوفية", "Monufia"), ("المنيا", "Minya"), ("القليوبية", "Qalyubia"),
+                ("الوادي الجديد", "New Valley"), ("السويس", "Suez"), ("اسوان", "Aswan"), ("اسيوط", "Assiut"),
+                ("بني سويف", "Beni Suef"), ("بورسعيد", "Port Said"), ("دمياط", "Damietta"), ("الشرقية", "Sharqia"),
+                ("جنوب سيناء", "South Sinai"), ("كفر الشيخ", "Kafr El Sheikh"), ("مطروح", "Matrouh"), ("الأقصر", "Luxor"),
+                ("قنا", "Qena"), ("شمال سيناء", "North Sinai"), ("سوهاج", "Sohag")
+            ]
+        ]
+
+        for key, en, ar in fields:
+            label = create_styled_label(form_frame, text=self.get_bilingual(key, en, ar), style='subheading')
             label.pack(pady=(0, 5), padx=20, anchor='w')
-            entry = create_styled_entry(form_frame)
+            if key == "category":
+                entry = ctk.CTkOptionMenu(form_frame, values=category_options)
+                entry.set(category_options[0])
+            elif key == "governorate":
+                entry = ctk.CTkOptionMenu(form_frame, values=governorate_options)
+                entry.set(governorate_options[0])
+            else:
+                entry = create_styled_entry(form_frame)
             entry.pack(fill='x', padx=20, pady=(0, 15))
             self.add_customer_entries[key] = entry
 
@@ -347,23 +397,55 @@ class CustomerManager:
         )
         title_label.pack(pady=20)
 
-        # Input fields
+        # Input fields (edit_customer)
         fields = [
-            ("name", "Name"),
-            ("contact", "Contact Person"),
-            ("email", "Email"),
-            ("phone", "Phone Number"),
-            ("address", "Address"),
-            ("notes", "Notes")
+            ("id", "Customer ID", "رقم العميل"),
+            ("name", "Name", "اسم العميل"),
+            ("category", "Category", "فئة العميل"),
+            ("address", "Address", "العنوان"),
+            ("phone1", "Phone 1", "تليفون 1"),
+            ("phone2", "Phone 2", "تليفون 2"),
+            ("local_code", "Local System Code", "الرمز الداخلي - المحلي"),
+            ("old_code", "Old System Code", "الرمز الداخلي - القديم"),
+            ("currency", "Currency", "عملة الحساب"),
+            ("city", "City", "المدينة"),
+            ("governorate", "Governorate", "المحافظة"),
+            ("country", "Country", "الدولة"),
+            ("representative", "Representative", "المندوب"),
+            ("notes", "Notes", "ملاحظات")
         ]
 
         self.edit_customer_entries = {} # Store entry widgets
 
-        for key, text in fields:
-            label = create_styled_label(form_frame, text=self.get_bilingual(key, text, text), style='subheading')
+        # Dropdown values
+        category_options = [
+            self.get_bilingual("category_cash", "Cash Customer", "عميل نقدي"),
+            self.get_bilingual("category_credit", "Credit Customer", "عميل بالأجل")
+        ]
+        governorate_options = [
+            self.get_bilingual(None, en, ar) for ar, en in [
+                ("القاهرة", "Cairo"), ("الجيزة", "Giza"), ("الإسكندرية", "Alexandria"), ("الدقهلية", "Dakahlia"),
+                ("البحر الأحمر", "Red Sea"), ("البحيرة", "Beheira"), ("الفيوم", "Fayoum"), ("الغربية", "Gharbia"),
+                ("الإسماعيلية", "Ismailia"), ("المنوفية", "Monufia"), ("المنيا", "Minya"), ("القليوبية", "Qalyubia"),
+                ("الوادي الجديد", "New Valley"), ("السويس", "Suez"), ("اسوان", "Aswan"), ("اسيوط", "Assiut"),
+                ("بني سويف", "Beni Suef"), ("بورسعيد", "Port Said"), ("دمياط", "Damietta"), ("الشرقية", "Sharqia"),
+                ("جنوب سيناء", "South Sinai"), ("كفر الشيخ", "Kafr El Sheikh"), ("مطروح", "Matrouh"), ("الأقصر", "Luxor"),
+                ("قنا", "Qena"), ("شمال سيناء", "North Sinai"), ("سوهاج", "Sohag")
+            ]
+        ]
+
+        for key, en, ar in fields:
+            label = create_styled_label(form_frame, text=self.get_bilingual(key, en, ar), style='subheading')
             label.pack(pady=(0, 5), padx=20, anchor='w')
-            entry = create_styled_entry(form_frame)
-            entry.insert(0, customer.get(key, '')) # Pre-fill with existing data
+            if key == "category":
+                entry = ctk.CTkOptionMenu(form_frame, values=category_options)
+                entry.set(customer.get(key, category_options[0]))
+            elif key == "governorate":
+                entry = ctk.CTkOptionMenu(form_frame, values=governorate_options)
+                entry.set(customer.get(key, governorate_options[0]))
+            else:
+                entry = create_styled_entry(form_frame)
+                entry.insert(0, customer.get(key, ''))
             entry.pack(fill='x', padx=20, pady=(0, 15))
             self.edit_customer_entries[key] = entry
 
@@ -488,4 +570,45 @@ class CustomerManager:
     def get_bilingual(self, key, default_en, default_ar):
         en = self.LANGUAGES['en'].get(key, default_en)
         ar = self.LANGUAGES['ar'].get(key, default_ar)
-        return f"{en} / {ar}" 
+        return f"{en} / {ar}"
+
+    def refresh_customers(self):
+        """Refresh the customers list from Excel and update display"""
+        try:
+            # Import data from Excel before loading from DB
+            if import_from_excel('customers'):
+                print("[DEBUG] Successfully imported customers from Excel")
+            else:
+                print("[DEBUG] No Excel data to import or import failed")
+            # Load customers from database
+            self.customers = load_data("customers") or []
+            print(f"[DEBUG] Loaded customers count: {len(self.customers)}")
+            # Refresh the display
+            self.display_customers()
+        except Exception as e:
+            import traceback
+            traceback_str = traceback.format_exc()
+            print(f"[TRACEBACK] {traceback_str}")
+            from ui_elements import show_error
+            show_error(f"Error refreshing customers: {str(e)}", self.current_language)
+
+    def go_to_next_page(self):
+        total_customers = len(self.customers)
+        total_pages = max(1, (total_customers + self.PAGE_SIZE - 1) // self.PAGE_SIZE)
+        if self.current_page < total_pages - 1:
+            self.current_page += 1
+            self.display_customers()
+
+    def go_to_previous_page(self):
+        if self.current_page > 0:
+            self.current_page -= 1
+            self.display_customers()
+
+    def delete_all_customers(self):
+        from data_handler import save_data
+        from ui_elements import show_success
+        # حذف كل العملاء من القاعدة والملفات
+        save_data('customers', [])
+        self.customers = []
+        self.display_customers()
+        show_success(self.LANGUAGES[self.current_language].get("all_customers_deleted", "All customers deleted successfully."), self.current_language) 
