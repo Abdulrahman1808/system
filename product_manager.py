@@ -167,6 +167,9 @@ class ProductManager:
             ("product_flavor", "Flavor"),
             ("product_weight", "Weight"),
             ("barcode", "Barcode"),
+            ("wholesale_supplier_price", "Wholesale Supplier Price"),
+            ("wholesale_sale_price", "Wholesale Sale Price"),
+            ("retail_sale_price", "Retail Sale Price"),
             ("product_status", "Status"),
             ("actions", "Actions")
         ]
@@ -224,14 +227,32 @@ class ProductManager:
                 style='body'
             )
             barcode_label.grid(row=i, column=4, padx=10, pady=10, sticky='w')
+            wholesale_supplier_price_label = create_styled_label(
+                scrollable_table,
+                text=str(product.get('wholesale_supplier_price', '')),
+                style='body'
+            )
+            wholesale_supplier_price_label.grid(row=i, column=5, padx=10, pady=10, sticky='w')
+            wholesale_sale_price_label = create_styled_label(
+                scrollable_table,
+                text=str(product.get('wholesale_sale_price', '')),
+                style='body'
+            )
+            wholesale_sale_price_label.grid(row=i, column=6, padx=10, pady=10, sticky='w')
+            retail_sale_price_label = create_styled_label(
+                scrollable_table,
+                text=str(product.get('retail_sale_price', '')),
+                style='body'
+            )
+            retail_sale_price_label.grid(row=i, column=7, padx=10, pady=10, sticky='w')
             status_label = create_styled_label(
                 scrollable_table,
                 text=str(product.get('status', 'active')),
                 style='body'
             )
-            status_label.grid(row=i, column=5, padx=10, pady=10, sticky='w')
+            status_label.grid(row=i, column=8, padx=10, pady=10, sticky='w')
             actions_frame = create_styled_frame(scrollable_table, style='card')
-            actions_frame.grid(row=i, column=6, padx=10, pady=10, sticky='w')
+            actions_frame.grid(row=i, column=9, padx=10, pady=10, sticky='w')
             edit_button = create_styled_button(
                 actions_frame,
                 text=self.LANGUAGES[self.current_language].get("edit", "Edit"),
@@ -472,6 +493,24 @@ class ProductManager:
         self.add_image_preview = ctk.CTkLabel(form_frame, text="", width=100, height=100)
         self.add_image_preview.pack(pady=(10, 10))
 
+        # Wholesale Supplier Price
+        wholesale_supplier_price_label = create_styled_label(form_frame, text="Wholesale Supplier Price / سعر الجملة من التاجر", style='subheading')
+        wholesale_supplier_price_label.pack(pady=(0, 5))
+        wholesale_supplier_price_entry = create_styled_entry(form_frame)
+        wholesale_supplier_price_entry.pack(fill='x', padx=20, pady=(0, 10))
+
+        # Wholesale Sale Price
+        wholesale_sale_price_label = create_styled_label(form_frame, text="Wholesale Sale Price / سعر الجملة للبيع", style='subheading')
+        wholesale_sale_price_label.pack(pady=(0, 5))
+        wholesale_sale_price_entry = create_styled_entry(form_frame)
+        wholesale_sale_price_entry.pack(fill='x', padx=20, pady=(0, 10))
+
+        # Retail Sale Price
+        retail_sale_price_label = create_styled_label(form_frame, text="Retail Sale Price / سعر البيع قطاعى", style='subheading')
+        retail_sale_price_label.pack(pady=(0, 5))
+        retail_sale_price_entry = create_styled_entry(form_frame)
+        retail_sale_price_entry.pack(fill='x', padx=20, pady=(0, 10))
+
         # Save button
         def save():
             # الحصول على اسم المنتج من القائمة المنسدلة أو حقل الإدخال
@@ -493,7 +532,10 @@ class ProductManager:
             weight = self.weight_menu.get() if self.weight_menu.get() != "-" else ""
             status = status_menu.get()
             location = location_menu.get()
-            self.save_product(dialog, name, flavor, weight, status, self.selected_image_path, self.barcode_entry.get(), location)
+            wholesale_supplier_price = wholesale_supplier_price_entry.get()
+            wholesale_sale_price = wholesale_sale_price_entry.get()
+            retail_sale_price = retail_sale_price_entry.get()
+            self.save_product(dialog, name, flavor, weight, status, self.selected_image_path, self.barcode_entry.get(), location, wholesale_supplier_price, wholesale_sale_price, retail_sale_price)
         save_button = create_styled_button(
             scrollable_form_frame,
             text=self.get_bilingual("save", "Save", "حفظ"),
@@ -692,6 +734,27 @@ class ProductManager:
         barcode_entry.insert(0, product.get('barcode', ''))
         barcode_entry.pack(fill='x', padx=20, pady=(0, 10))
 
+        # Wholesale Supplier Price
+        wholesale_supplier_price_label = create_styled_label(form_frame, text="Wholesale Supplier Price / سعر الجملة من التاجر", style='subheading')
+        wholesale_supplier_price_label.pack(pady=(0, 5))
+        wholesale_supplier_price_entry = create_styled_entry(form_frame)
+        wholesale_supplier_price_entry.insert(0, str(product.get('wholesale_supplier_price', '')))
+        wholesale_supplier_price_entry.pack(fill='x', padx=20, pady=(0, 10))
+
+        # Wholesale Sale Price
+        wholesale_sale_price_label = create_styled_label(form_frame, text="Wholesale Sale Price / سعر الجملة للبيع", style='subheading')
+        wholesale_sale_price_label.pack(pady=(0, 5))
+        wholesale_sale_price_entry = create_styled_entry(form_frame)
+        wholesale_sale_price_entry.insert(0, str(product.get('wholesale_sale_price', '')))
+        wholesale_sale_price_entry.pack(fill='x', padx=20, pady=(0, 10))
+
+        # Retail Sale Price
+        retail_sale_price_label = create_styled_label(form_frame, text="Retail Sale Price / سعر البيع قطاعى", style='subheading')
+        retail_sale_price_label.pack(pady=(0, 5))
+        retail_sale_price_entry = create_styled_entry(form_frame)
+        retail_sale_price_entry.insert(0, str(product.get('retail_sale_price', '')))
+        retail_sale_price_entry.pack(fill='x', padx=20, pady=(0, 10))
+
         # Update button
         update_button = create_styled_button(
             form_frame,
@@ -705,7 +768,10 @@ class ProductManager:
                 weight_menu.get(),
                 self.selected_image_path,
                 barcode_entry.get(),
-                location_menu.get()
+                location_menu.get(),
+                wholesale_supplier_price_entry.get(),
+                wholesale_sale_price_entry.get(),
+                retail_sale_price_entry.get()
             )
         )
         update_button.pack(pady=20)
@@ -723,7 +789,10 @@ class ProductManager:
                 weight_menu.get(),
                 self.selected_image_path,
                 barcode_entry.get(),
-                location_menu.get()
+                location_menu.get(),
+                wholesale_supplier_price_entry.get(),
+                wholesale_sale_price_entry.get(),
+                retail_sale_price_entry.get()
             )
         )
         save_button.pack(pady=10)
@@ -797,7 +866,7 @@ class ProductManager:
             import traceback
             traceback.print_exc()
 
-    def save_product(self, dialog, name, flavor, weight, status, image_path, barcode, location):
+    def save_product(self, dialog, name, flavor, weight, status, image_path, barcode, location, wholesale_supplier_price, wholesale_sale_price, retail_sale_price):
         """Save a new product"""
         if not name or not barcode:
             show_error(self.get_bilingual("name_weight_required", "Product Name and Weight are required.", "اسم المنتج، ووزن المنتج مطلوبان"), "en")
@@ -814,7 +883,10 @@ class ProductManager:
             'status': status,
             'image_path': image_path,
             'barcode': barcode,
-            'location': location
+            'location': location,
+            'wholesale_supplier_price': wholesale_supplier_price,
+            'wholesale_sale_price': wholesale_sale_price,
+            'retail_sale_price': retail_sale_price
         }
         self.products.append(new_product)
         save_data("products", self.products)
@@ -824,7 +896,7 @@ class ProductManager:
         dialog.destroy()
         show_success(self.get_bilingual("product_added_success", "Product added successfully!", "تمت إضافة المنتج بنجاح!"), "en")
 
-    def update_product(self, dialog, old_name, name, flavor, weight, image_path, barcode, location):
+    def update_product(self, dialog, old_name, name, flavor, weight, image_path, barcode, location, wholesale_supplier_price, wholesale_sale_price, retail_sale_price):
         """Update an existing product"""
         if not name or not barcode:
             show_error(self.get_bilingual("name_weight_required", "Product Name and Weight are required.", "اسم المنتج، ووزن المنتج مطلوبان"), "en")
@@ -838,6 +910,9 @@ class ProductManager:
                 product['image_path'] = image_path
                 product['barcode'] = barcode
                 product['location'] = location
+                product['wholesale_supplier_price'] = wholesale_supplier_price
+                product['wholesale_sale_price'] = wholesale_sale_price
+                product['retail_sale_price'] = retail_sale_price
                 break
         save_data("products", self.products)
         if self.record_sale_instance:

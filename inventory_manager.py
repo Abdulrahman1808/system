@@ -196,24 +196,23 @@ class InventoryManager:
         # Inventory table (scrollable)
         table_frame = create_styled_frame(main_frame, style='card')
         table_frame.pack(fill='both', expand=True, padx=20, pady=(0, 20))
-        canvas = tk.Canvas(table_frame, highlightthickness=0)
-        canvas.pack(side='left', fill='both', expand=True)
-        # Scrollbars
+        table_canvas_frame = tk.Frame(table_frame, bg=COLORS['surface'])
+        table_canvas_frame.pack(fill='both', expand=True)
+        canvas = tk.Canvas(table_canvas_frame, highlightthickness=0, bg=COLORS['surface'])
+        canvas.pack(side='top', fill='both', expand=True)
         h_scroll = tk.Scrollbar(table_frame, orient='horizontal', command=canvas.xview)
         h_scroll.pack(side='bottom', fill='x')
-        v_scroll = tk.Scrollbar(table_frame, orient='vertical', command=canvas.yview)
+        v_scroll = tk.Scrollbar(table_canvas_frame, orient='vertical', command=canvas.yview)
         v_scroll.pack(side='right', fill='y')
-        canvas.configure(xscrollcommand=h_scroll.set, yscrollcommand=v_scroll.set)
-        table_inner = ctk.CTkFrame(canvas)
+        canvas.configure(xscrollcommand=h_scroll.set, yscrollcommand=v_scroll.set, bg=COLORS['surface'])
+        table_inner = ctk.CTkFrame(canvas, fg_color=COLORS['surface'])
         table_window = canvas.create_window((0, 0), window=table_inner, anchor='nw')
         def on_configure(event):
             canvas.configure(scrollregion=canvas.bbox('all'))
         table_inner.bind('<Configure>', on_configure)
         def on_canvas_configure(event):
-            # canvas.itemconfig(table_window, width=event.width)  # تم التعطيل ليعمل السكرول الأفقي
             pass
         canvas.bind('<Configure>', on_canvas_configure)
-        # دعم السكرول بعجلة الماوس
         def _on_mousewheel(event):
             canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         canvas.bind_all("<MouseWheel>", _on_mousewheel)
@@ -221,22 +220,22 @@ class InventoryManager:
         
         # Table headers
         headers = [
-            ("select", "Select"),
-            ("item_name", "Item Name"),
-            ("barcode", "Barcode"),
-            ("category", "Category"),
-            ("quantity", "Wholesale Qty"),
-            ("retail_quantity", "Retail Qty"),
-            ("location", "Location"),
-            ("actions", "Actions")
+            ("item_name", self.get_bilingual("item_name", "Item Name", "اسم المنتج"), 180, 'w'),
+            ("carton_count", self.get_bilingual("carton_count", "Carton Count", "عدد الكراتين"), 110, 'nsew'),
+            ("carton_fraction", self.get_bilingual("carton_fraction", "Carton Fraction", "كسر الكرتونة"), 120, 'nsew'),
+            ("units_per_carton", self.get_bilingual("units_per_carton", "Units/Carton", "عدد في الكرتونة"), 110, 'nsew'),
+            ("unit_type", self.get_bilingual("unit_type", "Unit Type", "نوع الوحدة"), 100, 'nsew'),
+            ("total_wholesale", self.get_bilingual("total_wholesale", "Total Wholesale", "إجمالي الجملة"), 120, 'nsew'),
+            ("retail_quantity", self.get_bilingual("retail_quantity", "Retail Qty", "عدد القطاعي"), 110, 'nsew'),
+            ("extra_retail_quantity", self.get_bilingual("extra_retail_quantity", "Extra Retail Qty", "العدد الزائد القطاعي"), 120, 'nsew'),
+            ("total_quantity", self.get_bilingual("total_quantity", "Total Qty", "الإجمالي الكلي"), 110, 'nsew'),
+            ("location", self.get_bilingual("location", "Location", "المخزن"), 120, 'nsew'),
+            ("actions", self.get_bilingual("actions", "Actions", "إجراءات"), 140, 'nsew')
         ]
-        for i, (key, default_text) in enumerate(headers):
-            header = create_styled_label(
-                scrollable_table,
-                text=self.get_bilingual(key, default_text, default_text),
-                style='subheading'
-            )
-            header.grid(row=0, column=i, padx=10, pady=10, sticky='w')
+        for i, (key, label, width, align) in enumerate(headers):
+            header = create_styled_label(scrollable_table, text=label, style='subheading')
+            header.grid(row=0, column=i, padx=5, pady=10, sticky=align)
+            scrollable_table.grid_columnconfigure(i, minsize=width)
         
         # Inventory list
         # فلترة المنتجات حسب المخزن المحدد
@@ -252,79 +251,126 @@ class InventoryManager:
         page_items = filtered_inventory[start_idx:end_idx]
         
         for i, item in enumerate(page_items, 1):
-            # Checkbox لتحديد العنصر
-            var = ctk.BooleanVar()
-            checkbox = ctk.CTkCheckBox(
-                scrollable_table,
-                variable=var,
-                text="",
-                command=lambda v=var, item_id=item.get('id'): self.toggle_select_item(v, item_id)
-            )
-            checkbox.grid(row=i, column=0, padx=10, pady=10)
-            
+            row_bg = COLORS['surface'] if i % 2 == 0 else COLORS['background']
+            # اسم المنتج
             name_label = create_styled_label(
                 scrollable_table,
                 text=item.get('name', ''),
                 style='body'
             )
-            name_label.grid(row=i, column=1, padx=10, pady=10, sticky='w')
-            
-            barcode_label = create_styled_label(
+            name_label.grid(row=i, column=0, padx=5, pady=10, sticky='w')
+            name_label.configure(bg_color=row_bg)
+            # عدد الكراتين
+            carton_count_val = item.get('carton_count', 0)
+            try:
+                carton_count_val = int(float(carton_count_val))
+            except Exception:
+                carton_count_val = 0
+            carton_count_label = create_styled_label(
                 scrollable_table,
-                text=item.get('barcode', ''),
+                text=str(carton_count_val),
                 style='body'
             )
-            barcode_label.grid(row=i, column=2, padx=10, pady=10, sticky='w')
-            
-            category_label = create_styled_label(
+            carton_count_label.grid(row=i, column=1, padx=5, pady=10, sticky='nsew')
+            carton_count_label.configure(bg_color=row_bg)
+            # كسر الكرتونة
+            carton_fraction_label = create_styled_label(
                 scrollable_table,
-                text=item.get('type', '-'),
+                text=str(item.get('carton_fraction', 0)),
                 style='body'
             )
-            category_label.grid(row=i, column=3, padx=10, pady=10, sticky='w')
-            
-            quantity_label = create_styled_label(
+            carton_fraction_label.grid(row=i, column=2, padx=5, pady=10, sticky='nsew')
+            carton_fraction_label.configure(bg_color=row_bg)
+            # عدد في الكرتونة
+            units_per_carton_val = item.get('units_per_carton', 0)
+            try:
+                units_per_carton_val = int(float(units_per_carton_val))
+            except Exception:
+                units_per_carton_val = 0
+            units_per_carton_label = create_styled_label(
                 scrollable_table,
-                text=str(int(float(item.get('quantity', 0)))),
+                text=str(units_per_carton_val),
                 style='body'
             )
-            quantity_label.grid(row=i, column=4, padx=10, pady=10, sticky='w')
-            
-            retail_quantity_label = create_styled_label(
+            units_per_carton_label.grid(row=i, column=3, padx=5, pady=10, sticky='nsew')
+            units_per_carton_label.configure(bg_color=row_bg)
+            # نوع الوحدة
+            unit_type_val = item.get('unit_type') or item.get('type') or ''
+            unit_type_label = create_styled_label(
                 scrollable_table,
-                text=str(int(float(item.get('retail_quantity', 0)))),
+                text=unit_type_val,
                 style='body'
             )
-            retail_quantity_label.grid(row=i, column=5, padx=10, pady=10, sticky='w')
-            
+            unit_type_label.grid(row=i, column=4, padx=5, pady=10, sticky='nsew')
+            unit_type_label.configure(bg_color=row_bg)
+            # إجمالي الجملة
+            carton_count = float(item.get('carton_count', 0) or 0)
+            carton_fraction = float(item.get('carton_fraction', 0) or 0)
+            units_per_carton = float(item.get('units_per_carton', 0) or 0)
+            total_wholesale = (carton_count + carton_fraction) * units_per_carton
+            total_wholesale_label = create_styled_label(
+                scrollable_table,
+                text=str(int(total_wholesale) if total_wholesale.is_integer() else f"{total_wholesale:.2f}"),
+                style='body'
+            )
+            total_wholesale_label.grid(row=i, column=5, padx=5, pady=10, sticky='nsew')
+            total_wholesale_label.configure(bg_color=row_bg)
+            # إجمالي القطاعي
+            retail_qty = float(item.get('retail_quantity', 0) or 0)
+            retail_qty_label = create_styled_label(
+                scrollable_table,
+                text=str(int(retail_qty) if retail_qty.is_integer() else f"{retail_qty:.2f}"),
+                style='body'
+            )
+            retail_qty_label.grid(row=i, column=6, padx=5, pady=10, sticky='nsew')
+            retail_qty_label.configure(bg_color=row_bg)
+            # العدد الزائد القطاعي
+            extra_retail = float(item.get('extra_retail_quantity', 0) or 0)
+            extra_retail_label = create_styled_label(
+                scrollable_table,
+                text=str(int(extra_retail) if extra_retail.is_integer() else f"{extra_retail:.2f}"),
+                style='body'
+            )
+            extra_retail_label.grid(row=i, column=7, padx=5, pady=10, sticky='nsew')
+            extra_retail_label.configure(bg_color=row_bg)
+            # الإجمالي الكلي
+            total_retail = retail_qty + extra_retail
+            total_qty = total_wholesale + total_retail
+            total_qty_label = create_styled_label(
+                scrollable_table,
+                text=str(int(total_qty) if total_qty.is_integer() else f"{total_qty:.2f}"),
+                style='body'
+            )
+            total_qty_label.grid(row=i, column=8, padx=5, pady=10, sticky='nsew')
+            total_qty_label.configure(bg_color=row_bg)
+            # الموقع
             location_label = create_styled_label(
                 scrollable_table,
                 text=item.get('location', ''),
                 style='body'
             )
-            location_label.grid(row=i, column=6, padx=10, pady=10, sticky='w')
-            
-            # Action buttons
+            location_label.grid(row=i, column=9, padx=5, pady=10, sticky='nsew')
+            location_label.configure(bg_color=row_bg)
+            # الإجراءات
             actions_frame = create_styled_frame(scrollable_table, style='card')
-            actions_frame.grid(row=i, column=7, padx=10, pady=10, sticky='w')
-            
+            actions_frame.grid(row=i, column=10, padx=5, pady=10, sticky='nsew')
+            actions_frame.configure(fg_color=row_bg)
             edit_button = create_styled_button(
                 actions_frame,
                 text=self.get_bilingual("edit", "Edit", "تعديل"),
                 style='outline',
-                width=80,
+                width=60,
                 command=lambda i=item: self.edit_item(i)
             )
-            edit_button.pack(side='left', padx=5)
-            
+            edit_button.pack(side='left', padx=2)
             delete_button = create_styled_button(
                 actions_frame,
                 text=self.get_bilingual("delete", "Delete", "حذف"),
                 style='outline',
-                width=80,
+                width=60,
                 command=lambda i=item: self.delete_item(i)
             )
-            delete_button.pack(side='left', padx=5)
+            delete_button.pack(side='left', padx=2)
         
         # أزرار التنقل بين الصفحات
         nav_frame = create_styled_frame(main_frame, style='card')
@@ -364,48 +410,145 @@ class InventoryManager:
         scrollable_form_frame.pack(fill='both', expand=True, padx=20, pady=20)
         form_frame = create_styled_frame(scrollable_form_frame, style='card')
         form_frame.pack(fill='both', expand=True)
-        # اجلب كل أسماء المنتجات من ملف products
-        from data_handler import load_data
-        all_products = load_data("products") or []
-        product_names = list({p.get('name', '') for p in all_products if p.get('name', '').strip()})
-        # أضف أيضاً أسماء المنتجات الموجودة في المخزون ولم تعد موجودة في ملف المنتجات
-        inventory_names = [item['name'] for item in self.inventory if item.get('name', '').strip()]
-        all_names = product_names + inventory_names
+        # نافذة اختيار المنتج الاحترافية
+        def open_product_selector():
+            selector = ctk.CTkToplevel(self.root)
+            selector.title(self.get_bilingual("select_product", "Select Product", "اختر منتج"))
+            selector.geometry("600x500")
+            selector.grab_set()
+            search_var = ctk.StringVar()
+            search_entry = create_styled_entry(selector, placeholder_text=self.get_bilingual("search", "Search...", "بحث..."), textvariable=search_var)
+            search_entry.pack(fill='x', padx=20, pady=(20, 10))
+            table_frame = create_styled_frame(selector, style='card')
+            table_frame.pack(fill='both', expand=True, padx=20, pady=10)
+            headers = [
+                ("name", self.get_bilingual("product_name", "Product Name", "اسم المنتج")),
+                ("barcode", self.get_bilingual("barcode", "Barcode", "باركود")),
+                ("weight", self.get_bilingual("product_weight", "Weight", "وزن المنتج")),
+                ("date_added", self.get_bilingual("date_added", "Date Added", "تاريخ الإضافة"))
+            ]
+            for i, (_, label) in enumerate(headers):
+                header = create_styled_label(table_frame, text=label, style='subheading')
+                header.grid(row=0, column=i, padx=5, pady=5, sticky='nsew')
+                table_frame.grid_columnconfigure(i, weight=1)
+            from data_handler import load_data
+            all_products = load_data("products") or []
+            for p in all_products:
+                if not p.get('date_added'):
+                    p['date_added'] = p.get('date', '')
+            all_products.sort(key=lambda p: p.get('date_added', ''), reverse=True)
+            filtered_products = all_products.copy()
+            product_rows = []
+            selected_row_idx = [None]  # mutable for closure
+            # دعم الصفحات
+            items_per_page = 10
+            current_page = [0]
+            def update_table():
+                for row in product_rows:
+                    for cell in row:
+                        cell.destroy()
+                product_rows.clear()
+                # حساب الصفحات
+                total_items = len(filtered_products)
+                total_pages = max(1, (total_items + items_per_page - 1) // items_per_page)
+                start_idx = current_page[0] * items_per_page
+                end_idx = start_idx + items_per_page
+                page_products = filtered_products[start_idx:end_idx]
+                for idx, product in enumerate(page_products, 1):
+                    row = []
+                    for col, key in enumerate(["name", "barcode", "weight", "date_added"]):
+                        val = product.get(key, "-")
+                        cell = create_styled_label(table_frame, text=val, style='body')
+                        cell.grid(row=idx, column=col, padx=5, pady=3, sticky='nsew')
+                        row.append(cell)
+                    def on_select(event, p=product, row_idx=idx-1):
+                        # تظليل الصف
+                        for r, r_cells in enumerate(product_rows):
+                            for c in r_cells:
+                                c.configure(bg_color=COLORS['surface'] if r % 2 == 0 else COLORS['background'])
+                        for c in row:
+                            c.configure(bg_color="#2257a5")
+                        selected_row_idx[0] = row_idx
+                    row[0].bind('<Button-1>', on_select)
+                    row[0].bind('<Double-Button-1>', lambda e, p=product: (fill_product_fields(p), selector.destroy()))
+                    product_rows.append(row)
+                # أزرار الصفحات
+                if hasattr(update_table, 'nav_frame'):
+                    update_table.nav_frame.destroy()
+                nav_frame = create_styled_frame(selector, style='card')
+                nav_frame.pack(fill='x', padx=20, pady=(0, 10))
+                update_table.nav_frame = nav_frame
+                prev_btn = create_styled_button(nav_frame, text=self.get_bilingual("previous", "Previous", "السابق"), style='outline', command=lambda: go_page(-1))
+                prev_btn.pack(side='left', padx=10, pady=10)
+                page_label = create_styled_label(nav_frame, text=f"{current_page[0]+1} / {total_pages}", style='subheading')
+                page_label.pack(side='left', padx=10, pady=10)
+                next_btn = create_styled_button(nav_frame, text=self.get_bilingual("next", "Next", "التالي"), style='outline', command=lambda: go_page(1))
+                next_btn.pack(side='left', padx=10, pady=10)
+                prev_btn.configure(state='normal' if current_page[0] > 0 else 'disabled')
+                next_btn.configure(state='normal' if current_page[0] < total_pages-1 else 'disabled')
+            def go_page(delta):
+                total_items = len(filtered_products)
+                total_pages = max(1, (total_items + items_per_page - 1) // items_per_page)
+                current_page[0] = max(0, min(current_page[0]+delta, total_pages-1))
+                selected_row_idx[0] = None
+                update_table()
+            def on_search(*args):
+                q = search_var.get().strip().lower()
+                if not q:
+                    filtered_products[:] = all_products
+                else:
+                    filtered_products[:] = [p for p in all_products if q in str(p.get('name', '')).lower() or q in str(p.get('barcode', '')).lower()]
+                current_page[0] = 0
+                selected_row_idx[0] = None
+                update_table()
+            search_var.trace_add('write', on_search)
+            update_table()
+            def on_choose():
+                idx = selected_row_idx[0]
+                start_idx = current_page[0] * items_per_page
+                if idx is not None and 0 <= idx < items_per_page:
+                    product = filtered_products[start_idx + idx]
+                    fill_product_fields(product)
+                selector.destroy()
+            choose_btn = create_styled_button(selector, text=self.get_bilingual("choose", "Choose", "اختيار"), style='primary', command=on_choose)
+            choose_btn.pack(pady=10)
+        # دالة تعبئة الحقول
+        selected_product_name = ['']  # متغير قابل للتغيير داخل الدوال الداخلية
+
+        def fill_product_fields(product):
+            selected_product_name[0] = product.get('name', '')
+            type_menu.set(product.get('type', type_options[0]))
+            flavor_entry.delete(0, 'end')
+            flavor_entry.insert(0, product.get('flavor', '-'))
+            weight_entry.delete(0, 'end')
+            weight_entry.insert(0, product.get('weight', '-'))
+            barcode_entry.delete(0, 'end')
+            barcode_entry.insert(0, product.get('barcode', '-'))
+            wholesale_supplier_price_entry.delete(0, 'end')
+            wholesale_supplier_price_entry.insert(0, str(product.get('wholesale_supplier_price', '')))
+            wholesale_sale_price_entry.delete(0, 'end')
+            wholesale_sale_price_entry.insert(0, str(product.get('wholesale_sale_price', '')))
+            retail_sale_price_entry.delete(0, 'end')
+            retail_sale_price_entry.insert(0, str(product.get('retail_sale_price', '')))
+            carton_count_entry.delete(0, 'end')
+            carton_count_entry.insert(0, str(product.get('carton_count', '')))
+            units_per_carton_entry.delete(0, 'end')
+            units_per_carton_entry.insert(0, str(product.get('units_per_carton', '')))
+            retail_quantity_entry.delete(0, 'end')
+            retail_quantity_entry.insert(0, str(product.get('retail_quantity', 0)))
+            current_fraction = str(product.get('carton_fraction', '0'))
+            for val, label in fraction_options:
+                if val == current_fraction:
+                    fraction_menu.set(label)
+                    break
+            else:
+                fraction_menu.set(fraction_options[0][1])
+
+        # زر فتح نافذة اختيار المنتج
         product_label = create_styled_label(form_frame, text=self.get_bilingual("product_name", "Product Name", "اسم المنتج"), style='subheading')
         product_label.pack(pady=(20, 5))
-        product_menu = create_styled_option_menu(form_frame, values=inventory_names)
-        product_menu.pack(fill='x', padx=20, pady=(0, 15))
-        self.add_item_dialog = dialog
-        self.product_menu = product_menu
-        def on_product_select(selected_name):
-            selected = next((p for p in self.inventory if p.get('name', '') == selected_name), None)
-            if selected:
-                type_menu.set(selected.get('type', type_options[0]))
-                flavor_entry.delete(0, 'end')
-                flavor_entry.insert(0, selected.get('flavor', '-'))
-                weight_entry.delete(0, 'end')
-                weight_entry.insert(0, selected.get('weight', '-'))
-                barcode_entry.delete(0, 'end')
-                barcode_entry.insert(0, selected.get('barcode', '-'))
-            else:
-                type_menu.set(type_options[0])
-                flavor_entry.delete(0, 'end')
-                flavor_entry.insert(0, '-')
-                weight_entry.delete(0, 'end')
-                weight_entry.insert(0, '-')
-                barcode_entry.delete(0, 'end')
-                barcode_entry.insert(0, '-')
-        product_menu.configure(command=on_product_select)
-        # عدد الجملة
-        quantity_label = create_styled_label(form_frame, text=self.get_bilingual("wholesale_quantity", "Wholesale Qty", "عدد الجملة"), style='subheading')
-        quantity_label.pack(pady=(0, 5))
-        quantity_entry = create_styled_entry(form_frame)
-        quantity_entry.pack(fill='x', padx=20, pady=(0, 15))
-        # سعر الجملة
-        price_label = create_styled_label(form_frame, text=self.get_bilingual("wholesale_price", "Wholesale Price", "سعر الجملة"), style='subheading')
-        price_label.pack(pady=(0, 5))
-        price_entry = create_styled_entry(form_frame)
-        price_entry.pack(fill='x', padx=20, pady=(0, 10))
+        select_btn = create_styled_button(form_frame, text=self.get_bilingual("select_product", "Select Product", "اختر منتج"), style='outline', command=open_product_selector)
+        select_btn.pack(fill='x', padx=20, pady=(0, 15))
         # نوع المنتج (قائمة منسدلة)
         type_label = create_styled_label(form_frame, text=self.get_bilingual("product_type", "Type", "نوع المنتج"), style='subheading')
         type_label.pack(pady=(0, 5))
@@ -428,11 +571,62 @@ class InventoryManager:
         barcode_entry = create_styled_entry(form_frame)
         barcode_entry.insert(0, '-')
         barcode_entry.pack(fill='x', padx=20, pady=(0, 10))
-        # العدد القطاعي (اختياري)
+        # عدد الكراتين
+        carton_count_label = create_styled_label(form_frame, text=self.get_bilingual("carton_count", "Carton Count", "عدد الكراتين"), style='subheading')
+        carton_count_label.pack(pady=(0, 5))
+        carton_count_entry = create_styled_entry(form_frame)
+        carton_count_entry.pack(fill='x', padx=20, pady=(0, 10))
+        # كسر الكرتونة
+        fraction_label = create_styled_label(form_frame, text=self.get_bilingual("carton_fraction", "Carton Fraction", "كسر الكرتونة"), style='subheading')
+        fraction_label.pack(pady=(0, 5))
+        fraction_options = [
+            ("0", self.get_bilingual("no_fraction", "No Fraction", "لا شيء")),
+            ("0.25", self.get_bilingual("quarter_carton", "Quarter Carton", "ربع كرتونة")),
+            ("0.5", self.get_bilingual("half_carton", "Half Carton", "نصف كرتونة")),
+            ("0.75", self.get_bilingual("three_quarters_carton", "Three Quarters Carton", "ثلاثة أرباع كرتونة")),
+            ("0.33", self.get_bilingual("third_carton", "Third Carton", "ثلث كرتونة")),
+            ("0.66", self.get_bilingual("two_thirds_carton", "Two Thirds Carton", "ثلثي كرتونة"))
+        ]
+        fraction_menu = create_styled_option_menu(form_frame, values=[label for val, label in fraction_options])
+        current_fraction = '0'
+        for val, label in fraction_options:
+            if val == current_fraction:
+                fraction_menu.set(label)
+                break
+        else:
+            fraction_menu.set(fraction_options[0][1])
+        fraction_menu.pack(fill='x', padx=20, pady=(0, 10))
+        # عدد في الكرتونة
+        units_per_carton_label = create_styled_label(form_frame, text=self.get_bilingual("units_per_carton", "Units/Carton", "عدد في الكرتونة"), style='subheading')
+        units_per_carton_label.pack(pady=(0, 5))
+        units_per_carton_entry = create_styled_entry(form_frame)
+        units_per_carton_entry.pack(fill='x', padx=20, pady=(0, 10))
+        
+        # عدد القطاعي
         retail_quantity_label = create_styled_label(form_frame, text=self.get_bilingual("retail_quantity", "Retail Qty", "عدد القطاعي"), style='subheading')
         retail_quantity_label.pack(pady=(0, 5))
         retail_quantity_entry = create_styled_entry(form_frame)
-        retail_quantity_entry.pack(fill='x', padx=20, pady=(0, 15))
+        retail_quantity_entry.pack(fill='x', padx=20, pady=(0, 10))
+        
+        # عدد زائد قطاعى (اختياري)
+        extra_retail_label = create_styled_label(form_frame, text=self.get_bilingual("extra_retail_quantity", "Extra Retail Qty (Optional)", "عدد زائد قطاعى (اختياري)"), style='subheading')
+        extra_retail_label.pack(pady=(0, 5))
+        extra_retail_entry = create_styled_entry(form_frame)
+        extra_retail_entry.pack(fill='x', padx=20, pady=(0, 10))
+        
+        # أسعار
+        wholesale_supplier_price_label = create_styled_label(form_frame, text="Wholesale Supplier Price / سعر الجملة من التاجر", style='subheading')
+        wholesale_supplier_price_label.pack(pady=(0, 5))
+        wholesale_supplier_price_entry = create_styled_entry(form_frame)
+        wholesale_supplier_price_entry.pack(fill='x', padx=20, pady=(0, 10))
+        wholesale_sale_price_label = create_styled_label(form_frame, text="Wholesale Sale Price / سعر الجملة للبيع", style='subheading')
+        wholesale_sale_price_label.pack(pady=(0, 5))
+        wholesale_sale_price_entry = create_styled_entry(form_frame)
+        wholesale_sale_price_entry.pack(fill='x', padx=20, pady=(0, 10))
+        retail_sale_price_label = create_styled_label(form_frame, text="Retail Sale Price / سعر البيع قطاعى", style='subheading')
+        retail_sale_price_label.pack(pady=(0, 5))
+        retail_sale_price_entry = create_styled_entry(form_frame)
+        retail_sale_price_entry.pack(fill='x', padx=20, pady=(0, 10))
         # الموقع
         location_label = create_styled_label(form_frame, text=self.get_bilingual("location", "Location", "الموقع"), style='subheading')
         location_label.pack(pady=(0, 5))
@@ -446,22 +640,36 @@ class InventoryManager:
         location_menu = create_styled_option_menu(form_frame, values=store_names)
         location_menu.pack(fill='x', padx=20, pady=(0, 15))
         # زر الحفظ
+        def get_fraction_value(selected_label):
+            for val, label in fraction_options:
+                if label == selected_label:
+                    return float(val)
+            return 0.0
         def save_with_validation():
             try:
-                retail_qty = int(float(retail_quantity_entry.get() or 0))
+                fraction_val = get_fraction_value(fraction_menu.get())
+                extra_retail_val = float(extra_retail_entry.get() or 0)
+                retail_quantity_val = float(retail_quantity_entry.get() or 0)
             except ValueError:
-                show_error(self.get_bilingual("invalid_item", "Please enter a valid integer for retail quantity", "يرجى إدخال عدد صحيح للقطاعي"), self.current_language)
+                show_error(self.get_bilingual("invalid_item", "Please enter a valid value", "يرجى إدخال قيمة صحيحة"), self.current_language)
                 return
             self.save_item(
                 dialog,
-                product_menu.get(),
+                selected_product_name[0],
                 type_menu.get(),
-                int(float(quantity_entry.get() or 0)),
-                retail_qty,
+                0,  # Default quantity since quantity field was removed
                 location_menu.get(),
                 flavor_entry.get(),
                 weight_entry.get(),
-                barcode_entry.get()
+                barcode_entry.get(),
+                int(carton_count_entry.get() or 0),
+                fraction_val,
+                float(units_per_carton_entry.get() or 0),
+                wholesale_supplier_price_entry.get(),
+                wholesale_sale_price_entry.get(),
+                retail_sale_price_entry.get(),
+                extra_retail_val,
+                retail_quantity_val
             )
         save_button = create_styled_button(
             form_frame,
@@ -495,15 +703,6 @@ class InventoryManager:
         name_entry = create_styled_entry(form_frame)
         name_entry.insert(0, item.get('name', ''))
         name_entry.pack(fill='x', padx=20, pady=(0, 15))
-        quantity_label = create_styled_label(form_frame, text=self.get_bilingual("wholesale_quantity", "Wholesale Qty", "عدد الجملة"), style='subheading')
-        quantity_label.pack(pady=(0, 5))
-        quantity_entry = create_styled_entry(form_frame)
-        quantity_entry.pack(fill='x', padx=20, pady=(0, 15))
-        retail_quantity_label = create_styled_label(form_frame, text=self.get_bilingual("retail_quantity", "Retail Qty", "عدد القطاعي"), style='subheading')
-        retail_quantity_label.pack(pady=(0, 5))
-        retail_quantity_entry = create_styled_entry(form_frame)
-        retail_quantity_entry.insert(0, str(item.get('retail_quantity', 0)))
-        retail_quantity_entry.pack(fill='x', padx=20, pady=(0, 15))
         # نوع المنتج (قائمة منسدلة)
         type_label = create_styled_label(form_frame, text=self.get_bilingual("product_type", "Type", "نوع المنتج"), style='subheading')
         type_label.pack(pady=(0, 5))
@@ -511,6 +710,8 @@ class InventoryManager:
         type_menu = create_styled_option_menu(form_frame, values=type_options)
         if item.get('type') in type_options:
             type_menu.set(item.get('type'))
+        elif item.get('unit_type') in type_options:
+            type_menu.set(item.get('unit_type'))
         else:
             type_menu.set(type_options[0])
         type_menu.pack(fill='x', padx=20, pady=(0, 10))
@@ -534,24 +735,96 @@ class InventoryManager:
         location_menu = create_styled_option_menu(form_frame, values=store_names)
         location_menu.set(item.get('location', store_names[0]))
         location_menu.pack(fill='x', padx=20, pady=(0, 15))
+        # عدد الكراتين
+        carton_count_label = create_styled_label(form_frame, text=self.get_bilingual("carton_count", "Carton Count", "عدد الكراتين"), style='subheading')
+        carton_count_label.pack(pady=(0, 5))
+        carton_count_entry = create_styled_entry(form_frame)
+        carton_count_entry.insert(0, str(item.get('carton_count', 0)))
+        carton_count_entry.pack(fill='x', padx=20, pady=(0, 10))
+        # كسر الكرتونة
+        fraction_label = create_styled_label(form_frame, text=self.get_bilingual("carton_fraction", "Carton Fraction", "كسر الكرتونة"), style='subheading')
+        fraction_label.pack(pady=(0, 5))
+        fraction_options = [
+            ("0", self.get_bilingual("no_fraction", "No Fraction", "لا شيء")),
+            ("0.25", self.get_bilingual("quarter_carton", "Quarter Carton", "ربع كرتونة")),
+            ("0.5", self.get_bilingual("half_carton", "Half Carton", "نصف كرتونة")),
+            ("0.75", self.get_bilingual("three_quarters_carton", "Three Quarters Carton", "ثلاثة أرباع كرتونة")),
+            ("0.33", self.get_bilingual("third_carton", "Third Carton", "ثلث كرتونة")),
+            ("0.66", self.get_bilingual("two_thirds_carton", "Two Thirds Carton", "ثلثي كرتونة"))
+        ]
+        fraction_menu = create_styled_option_menu(form_frame, values=[label for val, label in fraction_options])
+        current_fraction = '0'
+        for val, label in fraction_options:
+            if val == current_fraction:
+                fraction_menu.set(label)
+                break
+        else:
+            fraction_menu.set(fraction_options[0][1])
+        fraction_menu.pack(fill='x', padx=20, pady=(0, 10))
+        # عدد في الكرتونة
+        units_per_carton_label = create_styled_label(form_frame, text=self.get_bilingual("units_per_carton", "Units/Carton", "عدد في الكرتونة"), style='subheading')
+        units_per_carton_label.pack(pady=(0, 5))
+        units_per_carton_entry = create_styled_entry(form_frame)
+        units_per_carton_entry.pack(fill='x', padx=20, pady=(0, 10))
+        
+        # عدد القطاعي
+        retail_quantity_label = create_styled_label(form_frame, text=self.get_bilingual("retail_quantity", "Retail Qty", "عدد القطاعي"), style='subheading')
+        retail_quantity_label.pack(pady=(0, 5))
+        retail_quantity_entry = create_styled_entry(form_frame)
+        retail_quantity_entry.pack(fill='x', padx=20, pady=(0, 10))
+        
+        # عدد زائد قطاعى (اختياري)
+        extra_retail_label = create_styled_label(form_frame, text=self.get_bilingual("extra_retail_quantity", "Extra Retail Qty (Optional)", "عدد زائد قطاعى (اختياري)"), style='subheading')
+        extra_retail_label.pack(pady=(0, 5))
+        extra_retail_entry = create_styled_entry(form_frame)
+        extra_retail_entry.pack(fill='x', padx=20, pady=(0, 10))
+        
+        # أسعار
+        wholesale_supplier_price_label = create_styled_label(form_frame, text="Wholesale Supplier Price / سعر الجملة من التاجر", style='subheading')
+        wholesale_supplier_price_label.pack(pady=(0, 5))
+        wholesale_supplier_price_entry = create_styled_entry(form_frame)
+        wholesale_supplier_price_entry.pack(fill='x', padx=20, pady=(0, 10))
+        wholesale_sale_price_label = create_styled_label(form_frame, text="Wholesale Sale Price / سعر الجملة للبيع", style='subheading')
+        wholesale_sale_price_label.pack(pady=(0, 5))
+        wholesale_sale_price_entry = create_styled_entry(form_frame)
+        wholesale_sale_price_entry.pack(fill='x', padx=20, pady=(0, 10))
+        retail_sale_price_label = create_styled_label(form_frame, text="Retail Sale Price / سعر البيع قطاعى", style='subheading')
+        retail_sale_price_label.pack(pady=(0, 5))
+        retail_sale_price_entry = create_styled_entry(form_frame)
+        retail_sale_price_entry.pack(fill='x', padx=20, pady=(0, 10))
+        
         # في نافذة التعديل أيضاً
+        def get_fraction_value(selected_label):
+            for val, label in fraction_options:
+                if label == selected_label:
+                    return float(val)
+            return 0.0
         def update_with_validation():
             try:
-                retail_qty = int(float(retail_quantity_entry.get() or 0))
+                fraction_val = get_fraction_value(fraction_menu.get())
+                extra_retail_val = float(extra_retail_entry.get() or 0)
+                retail_quantity_val = float(retail_quantity_entry.get() or 0)
             except ValueError:
-                show_error(self.get_bilingual("invalid_item", "Please enter a valid integer for retail quantity", "يرجى إدخال عدد صحيح للقطاعي"), self.current_language)
+                show_error(self.get_bilingual("invalid_item", "Please enter valid numbers", "يرجى إدخال أرقام صحيحة"), self.current_language)
                 return
             self.update_item(
                 dialog,
                 item,
                 name_entry.get(),
-                int(float(quantity_entry.get() or 0)),
-                retail_qty,
+                0,  # quantity
                 location_menu.get(),
                 type_menu.get(),
                 flavor_entry.get(),
                 weight_entry.get(),
-                barcode_entry.get()
+                barcode_entry.get(),
+                int(carton_count_entry.get() or 0),
+                fraction_val,
+                float(units_per_carton_entry.get() or 0),
+                wholesale_supplier_price_entry.get(),
+                wholesale_sale_price_entry.get(),
+                retail_sale_price_entry.get(),
+                extra_retail_val,
+                retail_quantity_val
             )
         save_button = create_styled_button(
             form_frame,
@@ -568,12 +841,11 @@ class InventoryManager:
         )
         cancel_button.pack(pady=20)
 
-    def save_item(self, dialog, name, type_value, quantity, retail_quantity, location, flavor, weight, barcode):
+    def save_item(self, dialog, name, type_value, quantity, location, flavor, weight, barcode, carton_count, fraction_val, units_per_carton, wholesale_supplier_price, wholesale_sale_price, retail_sale_price, extra_retail_quantity, retail_quantity):
         """Save a new inventory item"""
         if not name or not type_value:
             show_error(self.get_bilingual("invalid_item", "Please fill all fields correctly", "يرجى ملء جميع الحقون الصحيحة"), self.current_language)
             return
-        
         # التحقق من وجود عنصر بنفس الباركود
         if barcode and barcode != '-':
             existing_item = next((item for item in self.inventory if item.get('barcode') == barcode), None)
@@ -584,11 +856,9 @@ class InventoryManager:
                 choice_dialog.geometry("400x300")
                 choice_dialog.grab_set()
                 choice_dialog.attributes('-topmost', True)
-                
                 # إطار النافذة
                 choice_frame = create_styled_frame(choice_dialog, style='card')
                 choice_frame.pack(fill='both', expand=True, padx=20, pady=20)
-                
                 # رسالة التحذير
                 warning_label = create_styled_label(
                     choice_frame,
@@ -598,11 +868,9 @@ class InventoryManager:
                     style='subheading'
                 )
                 warning_label.pack(pady=20)
-                
                 # أزرار الاختيار
                 buttons_frame = create_styled_frame(choice_frame, style='card')
                 buttons_frame.pack(pady=20)
-                
                 def merge_quantities():
                     """دمج الكميات مع العنصر الموجود"""
                     existing_item['quantity'] = existing_item.get('quantity', 0) + quantity
@@ -612,6 +880,7 @@ class InventoryManager:
                         existing_item['name'] = name
                     if existing_item.get('type') != type_value:
                         existing_item['type'] = type_value
+                        existing_item['unit_type'] = type_value
                         existing_item['category'] = type_value
                     if existing_item.get('flavor') != flavor:
                         existing_item['flavor'] = flavor
@@ -619,7 +888,14 @@ class InventoryManager:
                         existing_item['weight'] = weight
                     if existing_item.get('location') != location:
                         existing_item['location'] = location
-                    
+                    existing_item['carton_count'] = carton_count
+                    existing_item['carton_fraction'] = fraction_val
+                    existing_item['units_per_carton'] = units_per_carton
+                    existing_item['wholesale_supplier_price'] = wholesale_supplier_price
+                    existing_item['wholesale_sale_price'] = wholesale_sale_price
+                    existing_item['retail_sale_price'] = retail_sale_price
+                    existing_item['extra_retail_quantity'] = extra_retail_quantity
+                    existing_item['retail_quantity'] = retail_quantity
                     save_data("inventory", self.inventory)
                     choice_dialog.destroy()
                     dialog.destroy()
@@ -628,20 +904,27 @@ class InventoryManager:
                     # تحديث شاشة المحل إذا كانت موجودة
                     if hasattr(self, 'store_manager_instance') and self.store_manager_instance:
                         self.store_manager_instance.refresh_store()
-                
                 def add_as_new():
                     """إضافة كعنصر جديد"""
                     new_item = {
                         'id': get_next_id('inventory'),
                         'name': name,
                         'type': type_value,
+                        'unit_type': type_value,
                         'category': type_value,
                         'flavor': flavor,
                         'weight': weight,
                         'barcode': barcode,
                         'quantity': quantity,
-                        'retail_quantity': retail_quantity,
-                        'location': location
+                        'location': location,
+                        'carton_count': carton_count,
+                        'carton_fraction': fraction_val,
+                        'units_per_carton': units_per_carton,
+                        'wholesale_supplier_price': wholesale_supplier_price,
+                        'wholesale_sale_price': wholesale_sale_price,
+                        'retail_sale_price': retail_sale_price,
+                        'extra_retail_quantity': extra_retail_quantity,
+                        'retail_quantity': retail_quantity
                     }
                     self.inventory.append(new_item)
                     save_data("inventory", self.inventory)
@@ -652,11 +935,9 @@ class InventoryManager:
                     # تحديث شاشة المحل إذا كانت موجودة
                     if hasattr(self, 'store_manager_instance') and self.store_manager_instance:
                         self.store_manager_instance.refresh_store()
-                
                 def cancel_operation():
                     """إلغاء العملية"""
                     choice_dialog.destroy()
-                
                 # زر دمج الكميات
                 merge_button = create_styled_button(
                     buttons_frame,
@@ -665,7 +946,6 @@ class InventoryManager:
                     command=merge_quantities
                 )
                 merge_button.pack(side='left', padx=10, pady=10)
-                
                 # زر إضافة كعنصر جديد
                 add_new_button = create_styled_button(
                     buttons_frame,
@@ -674,7 +954,6 @@ class InventoryManager:
                     command=add_as_new
                 )
                 add_new_button.pack(side='left', padx=10, pady=10)
-                
                 # زر الإلغاء
                 cancel_button = create_styled_button(
                     buttons_frame,
@@ -683,21 +962,27 @@ class InventoryManager:
                     command=cancel_operation
                 )
                 cancel_button.pack(side='left', padx=10, pady=10)
-                
                 return  # إيقاف تنفيذ الدالة الأصلية
-        
         # إذا لم يكن هناك عنصر موجود، أضف العنصر الجديد
         new_item = {
             'id': get_next_id('inventory'),
             'name': name,
             'type': type_value,
+            'unit_type': type_value,
             'category': type_value,  # تساوي بين type و category
             'flavor': flavor,
             'weight': weight,
             'barcode': barcode,
             'quantity': quantity,
-            'retail_quantity': retail_quantity,
-            'location': location
+            'location': location,
+            'carton_count': carton_count,
+            'carton_fraction': fraction_val,
+            'units_per_carton': units_per_carton,
+            'wholesale_supplier_price': wholesale_supplier_price,
+            'wholesale_sale_price': wholesale_sale_price,
+            'retail_sale_price': retail_sale_price,
+            'extra_retail_quantity': extra_retail_quantity,
+            'retail_quantity': retail_quantity
         }
         self.inventory.append(new_item)
         save_data("inventory", self.inventory)
@@ -708,7 +993,7 @@ class InventoryManager:
         if hasattr(self, 'store_manager_instance') and self.store_manager_instance:
             self.store_manager_instance.refresh_store()
 
-    def update_item(self, dialog, item, name, quantity, retail_quantity, location, type_value, flavor, weight, barcode):
+    def update_item(self, dialog, item, name, quantity, location, type_value, flavor, weight, barcode, carton_count, fraction_val, units_per_carton, wholesale_supplier_price, wholesale_sale_price, retail_sale_price, extra_retail_quantity, retail_quantity):
         """Update an existing inventory item"""
         if not name or not type_value or quantity < 0:
             show_error(self.get_bilingual("invalid_item", "Please fill all fields correctly", "يرجى ملء جميع الحقون الصحيحة"), self.current_language)
@@ -716,19 +1001,26 @@ class InventoryManager:
         item.update({
             'name': name,
             'quantity': quantity,
-            'retail_quantity': retail_quantity,
             'location': location,
             'type': type_value,
+            'unit_type': type_value,
             'category': type_value,  # تساوي بين type و category
             'flavor': flavor,
             'weight': weight,
-            'barcode': barcode
+            'barcode': barcode,
+            'carton_count': carton_count,
+            'carton_fraction': fraction_val,
+            'units_per_carton': units_per_carton,
+            'wholesale_supplier_price': wholesale_supplier_price,
+            'wholesale_sale_price': wholesale_sale_price,
+            'retail_sale_price': retail_sale_price,
+            'extra_retail_quantity': extra_retail_quantity,
+            'retail_quantity': retail_quantity
         })
         save_data("inventory", self.inventory)
         dialog.destroy()
         self.manage_inventory()
         show_success(self.get_bilingual("item_updated", "Item updated successfully", "تم تحديث العنصر بنجاح"), self.current_language)
-        # تحديث شاشة المحل إذا كانت موجودة
         if hasattr(self, 'store_manager_instance') and self.store_manager_instance:
             self.store_manager_instance.refresh_store()
 

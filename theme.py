@@ -60,11 +60,11 @@ LIGHT_COLORS = {
 
 # Font configurations
 FONTS = {
-    'heading': ('Helvetica', 24, 'bold'),
-    'subheading': ('Helvetica', 18, 'bold'),
-    'body': ('Helvetica', 12),
-    'button': ('Helvetica', 12, 'bold'),
-    'small': ('Helvetica', 10)
+    'heading': ('Helvetica', 28, 'bold'),
+    'subheading': ('Helvetica', 20, 'bold'),
+    'body': ('Helvetica', 14),
+    'button': ('Helvetica', 14, 'bold'),
+    'small': ('Helvetica', 12)
 }
 
 # Global variable to track current theme
