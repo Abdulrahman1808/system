@@ -143,7 +143,18 @@ LANGUAGES = {
         "error_adding_type": "Error adding type",
         "error_adding_flavor": "Error adding flavor",
         "add": "Add",
-        "close": "Close"
+        "close": "Close",
+        "low_retail_stock_alert": "Low retail stock for {item_name}. Only {quantity} retail units left.",
+        "out_of_stock_alert": "OUT OF STOCK: {product_name} is completely out of stock!",
+        "high_sales_alert": "High sales alert: {product_name} has sold {total_sold} units",
+        "expired_product_alert": "EXPIRED: {product_name} has expired!",
+        "expiring_soon_alert": "Expiring soon: {product_name} expires in {days} days",
+        "notification_settings": "Notification Settings",
+        "low_stock_threshold": "Low Stock Threshold",
+        "settings_saved": "Settings saved successfully",
+        "invalid_threshold": "Please enter a valid threshold",
+        "save": "Save",
+        "settings": "Settings"
     },
     "ar": {
         "title": "نظام إدارة متجر الشيشة",
@@ -240,6 +251,17 @@ LANGUAGES = {
         "error_adding_type": "خطأ عند إضافة النوع",
         "error_adding_flavor": "خطأ عند إضافة النكهة",
         "add": "إضافة",
-        "close": "إغلاق"
+        "close": "إغلاق",
+        "low_retail_stock_alert": "مخزون التجزئة منخفض لـ {item_name}. المتاح فقط {quantity} وحدة تجزئة",
+        "out_of_stock_alert": "إنتهاء المخزون: {product_name} منتهي المخزون تماما!",
+        "high_sales_alert": "تنبيه مبيعات عالية: {product_name} باع {total_sold} وحدة",
+        "expired_product_alert": "منتهي الصلاحية: {product_name} منتهي الصلاحية!",
+        "expiring_soon_alert": "منتهي الصلاحية: {product_name} ستنتهي في {days} أيام",
+        "notification_settings": "إعداد الإشعارات",
+        "low_stock_threshold": "مستوى مخزون التجزئة",
+        "settings_saved": "تم حفظ الإعدادات بنجاح",
+        "invalid_threshold": "يرجى إدخال قيمة صالحة",
+        "save": "حفظ",
+        "settings": "الإعدادات"
     }
 }
