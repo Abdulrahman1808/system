@@ -186,9 +186,9 @@ def create_styled_entry(parent, **kwargs):
     """Create a styled entry field with consistent appearance"""
     entry = ctk.CTkEntry(parent, **kwargs)
     entry.configure(
-        fg_color=COLORS['surface'],
+        fg_color="#222222",
         border_color=COLORS['border'],
-        text_color=COLORS['text'],
+        text_color="#FFFFFF",
         font=FONTS['body']
     )
     return entry

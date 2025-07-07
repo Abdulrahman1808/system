@@ -960,20 +960,25 @@ class ProductManager:
             widget.destroy()
 
     def filter_products(self, *args):
-        """فلترة المنتجات حسب البحث في الاسم أو الباركود، وإذا كان البحث يطابق باركود منتج يظهر المنتج فقط"""
+        """فلترة المنتجات حسب البحث في الاسم أو الباركود أو الطعم، وإذا كان البحث يطابق باركود منتج يظهر المنتج فقط"""
         query = getattr(self, 'search_var', None)
         if query is not None:
-            query = query.get().strip()
+            query = query.get().strip().lower()
         else:
             return
         all_products = load_data("products") or []
         if query:
             # إذا كان البحث يطابق باركود منتج بالضبط
-            product_by_barcode = next((p for p in all_products if str(p.get('barcode', '')) == query), None)
+            product_by_barcode = next((p for p in all_products if str(p.get('barcode', '')).lower() == query), None)
             if product_by_barcode:
                 self.products = [product_by_barcode]
             else:
-                self.products = [p for p in all_products if query.lower() in str(p.get('name', '')).lower() or query in str(p.get('barcode', ''))]
+                self.products = [
+                    p for p in all_products
+                    if query in str(p.get('name', '')).lower()
+                    or query in str(p.get('barcode', '')).lower()
+                    or query in str(p.get('flavor', '')).lower()
+                ]
         else:
             self.products = all_products
         self.current_page = 0
