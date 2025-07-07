@@ -906,6 +906,7 @@ class ReportingAnalytics:
             insights += "🔴 LOW RETENTION: Need to improve customer retention\n"
         
         # Purchase frequency analysis
+        avg_visits = 0  # Initialize with default value
         if customer_visits:
             avg_visits = sum(customer_visits.values()) / len(customer_visits)
             insights += f"📊 Average Visits per Customer: {avg_visits:.1f}\n"
@@ -944,7 +945,7 @@ class ReportingAnalytics:
         if high_value_customers < len(customer_spending) * 0.1:
             insights += "• Target high-value customer acquisition\n"
             insights += "• Premium service offerings\n"
-        if avg_visits < 2:
+        if customer_visits and avg_visits < 2:
             insights += "• Implement customer retention strategies\n"
             insights += "• Regular follow-up communications\n"
         
