@@ -13,7 +13,7 @@ from reporting_analytics import ReportingAnalytics
 from accounts_payable import ExpensesBillsManager
 from notifications_manager import NotificationsManager
 from theme import apply_theme, create_styled_frame, create_styled_label, create_styled_entry, create_styled_button
-from data_handler import load_credentials, import_from_excel
+from data_handler import load_credentials, import_from_excel, load_hookah_types, load_hookah_flavors
 
 class HookahShopApp:
     def __init__(self, root):
@@ -112,7 +112,20 @@ class HookahShopApp:
         
         # Initialize screen managers
         self.record_sale = RecordSale(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
-        self.product_manager = ProductManager(self.root, self.current_language, self.LANGUAGES, self.show_main_menu, record_sale_instance=self.record_sale)
+        
+        # Load dynamic types and flavors
+        hookah_types = load_hookah_types()
+        hookah_flavors = load_hookah_flavors()
+        
+        self.product_manager = ProductManager(
+            self.root, 
+            self.current_language, 
+            self.LANGUAGES, 
+            self.show_main_menu, 
+            hookah_types=hookah_types,
+            hookah_flavors=hookah_flavors,
+            record_sale_instance=self.record_sale
+        )
         self.inventory_manager = InventoryManager(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)
         self.store_manager = None  # سننشئه عند الحاجة
         self.view_sales = ViewSalesRecords(self.root, self.current_language, self.LANGUAGES, self.show_main_menu)

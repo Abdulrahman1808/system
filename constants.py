@@ -23,7 +23,9 @@ MONGODB_COLLECTIONS = {
     "accounts_payable": "accounts_payable",
     "employees": "employees",
     "customers": "customers",
-    "store_products": "store_products"
+    "store_products": "store_products",
+    "hookah_types": "hookah_types",
+    "hookah_flavors": "hookah_flavors"
 }
 
 # Excel file paths
@@ -43,10 +45,6 @@ EXCEL_FILES = {
 load_dotenv()
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/")
 MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME", "hookah_shop_db")
-
-# Hookah types and flavors
-HOOKAH_TYPES = ["Traditional", "Modern", "Portable", "Electric"]
-HOOKAH_FLAVORS = ["Apple", "Mint", "Grape", "Watermelon", "Orange", "Mixed"]
 
 # Language strings
 LANGUAGES = {
@@ -131,7 +129,21 @@ LANGUAGES = {
         "enter_payment": "Enter payment amount",
         "payment_success": "Payment recorded successfully",
         "no_due_bills": "No due bills to pay",
-        "pay": "Pay"
+        "pay": "Pay",
+        "manage_types": "Manage Types",
+        "manage_flavors": "Manage Flavors",
+        "current_types": "Current Types",
+        "current_flavors": "Current Flavors",
+        "add_new_type": "Add New Type",
+        "add_new_flavor": "Add New Flavor",
+        "enter_type_name": "Enter type name",
+        "enter_flavor_name": "Enter flavor name",
+        "type_added": "Type added successfully",
+        "flavor_added": "Flavor added successfully",
+        "error_adding_type": "Error adding type",
+        "error_adding_flavor": "Error adding flavor",
+        "add": "Add",
+        "close": "Close"
     },
     "ar": {
         "title": "نظام إدارة متجر الشيشة",
@@ -214,6 +226,20 @@ LANGUAGES = {
         "enter_payment": "أدخل مبلغ الدفعة / Enter payment amount",
         "payment_success": "تم تسجيل الدفعة بنجاح / Payment recorded successfully",
         "no_due_bills": "لا توجد فواتير مستحقة للدفع / No due bills to pay",
-        "pay": "تسديد / Pay"
+        "pay": "تسديد / Pay",
+        "manage_types": "إدارة الأنواع",
+        "manage_flavors": "إدارة النكهات",
+        "current_types": "الأنواع الحالية",
+        "current_flavors": "النكهات الحالية",
+        "add_new_type": "إضافة أنواع جديدة",
+        "add_new_flavor": "إضافة نكهات جديدة",
+        "enter_type_name": "أدخل اسم النوع",
+        "enter_flavor_name": "أدخل اسم النكهة",
+        "type_added": "تم إضافة النوع بنجاح",
+        "flavor_added": "تم إضافة النكهة بنجاح",
+        "error_adding_type": "خطأ عند إضافة النوع",
+        "error_adding_flavor": "خطأ عند إضافة النكهة",
+        "add": "إضافة",
+        "close": "إغلاق"
     }
 }

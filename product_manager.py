@@ -4,7 +4,9 @@ from tkcalendar import DateEntry
 from ui_elements import show_error, show_success
 from data_handler import (
     insert_document, update_document, delete_document,
-    load_data, save_data, get_next_id, import_from_excel
+    load_data, save_data, get_next_id, import_from_excel,
+    load_hookah_types, save_hookah_types, add_hookah_type, remove_hookah_type,
+    load_hookah_flavors, save_hookah_flavors, add_hookah_flavor, remove_hookah_flavor
 )
 from theme import (
     COLORS, FONTS, create_styled_button,
@@ -151,6 +153,23 @@ class ProductManager:
             command=self.add_product
         )
         add_button.pack(side='right', padx=20, pady=20)
+        
+        # Add manage types and flavors buttons
+        manage_types_button = create_styled_button(
+            search_frame,
+            text=self.LANGUAGES[self.current_language].get("manage_types", "Manage Types"),
+            style='outline',
+            command=self.manage_types
+        )
+        manage_types_button.pack(side='right', padx=20, pady=20)
+        
+        manage_flavors_button = create_styled_button(
+            search_frame,
+            text=self.LANGUAGES[self.current_language].get("manage_flavors", "Manage Flavors"),
+            style='outline',
+            command=self.manage_flavors
+        )
+        manage_flavors_button.pack(side='right', padx=20, pady=20)
         
         # Products table
         table_frame = create_styled_frame(main_frame, style='card')
@@ -1001,3 +1020,187 @@ class ProductManager:
         if self.current_page > 0:
             self.current_page -= 1
             self.manage_products()
+
+    def manage_types(self):
+        """Manage hookah types"""
+        # Create dialog
+        dialog = ctk.CTkToplevel(self.root)
+        dialog.title(self.get_bilingual("manage_types", "Manage Types", "إدارة الأنواع"))
+        dialog.geometry("500x400")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        # Main frame
+        main_frame = create_styled_frame(dialog, style='card')
+        main_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
+        # Title
+        title_label = create_styled_label(
+            main_frame,
+            text=self.get_bilingual("manage_types", "Manage Types", "إدارة الأنواع"),
+            style='heading'
+        )
+        title_label.pack(pady=(20, 30))
+        
+        # Current types list
+        types_frame = create_styled_frame(main_frame, style='card')
+        types_frame.pack(fill='both', expand=True, padx=20, pady=(0, 20))
+        
+        types_label = create_styled_label(
+            types_frame,
+            text=self.get_bilingual("current_types", "Current Types", "الأنواع الحالية"),
+            style='subheading'
+        )
+        types_label.pack(pady=(10, 10))
+        
+        # Load current types
+        current_types = load_hookah_types()
+        
+        # Types listbox
+        types_listbox = ctk.CTkTextbox(types_frame, height=150)
+        types_listbox.pack(fill='both', expand=True, padx=20, pady=(0, 20))
+        
+        for i, type_name in enumerate(current_types, 1):
+            types_listbox.insert("end", f"{i}. {type_name}\n")
+        
+        # Add new type section
+        add_frame = create_styled_frame(main_frame, style='card')
+        add_frame.pack(fill='x', padx=20, pady=(0, 20))
+        
+        add_label = create_styled_label(
+            add_frame,
+            text=self.get_bilingual("add_new_type", "Add New Type", "إضافة نوع جديد"),
+            style='subheading'
+        )
+        add_label.pack(pady=(10, 10))
+        
+        # Entry for new type
+        new_type_entry = create_styled_entry(
+            add_frame,
+            placeholder_text=self.get_bilingual("enter_type_name", "Enter type name", "أدخل اسم النوع")
+        )
+        new_type_entry.pack(fill='x', padx=20, pady=(0, 10))
+        
+        def add_type():
+            new_type = new_type_entry.get().strip()
+            if new_type:
+                if add_hookah_type(new_type):
+                    show_success(self.get_bilingual("type_added", "Type added successfully", "تمت إضافة النوع بنجاح"), self.current_language)
+                    dialog.destroy()
+                    self.manage_types()  # Refresh the dialog
+                else:
+                    show_error(self.get_bilingual("error_adding_type", "Error adding type", "خطأ في إضافة النوع"), self.current_language)
+            else:
+                show_error(self.get_bilingual("enter_type_name", "Please enter a type name", "يرجى إدخال اسم النوع"), self.current_language)
+        
+        add_button = create_styled_button(
+            add_frame,
+            text=self.get_bilingual("add", "Add", "إضافة"),
+            style='primary',
+            command=add_type
+        )
+        add_button.pack(pady=(0, 10))
+        
+        # Buttons frame
+        buttons_frame = create_styled_frame(main_frame, style='card')
+        buttons_frame.pack(fill='x', padx=20, pady=(0, 20))
+        
+        close_button = create_styled_button(
+            buttons_frame,
+            text=self.get_bilingual("close", "Close", "إغلاق"),
+            style='outline',
+            command=dialog.destroy
+        )
+        close_button.pack(pady=10)
+
+    def manage_flavors(self):
+        """Manage hookah flavors"""
+        # Create dialog
+        dialog = ctk.CTkToplevel(self.root)
+        dialog.title(self.get_bilingual("manage_flavors", "Manage Flavors", "إدارة النكهات"))
+        dialog.geometry("500x400")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        # Main frame
+        main_frame = create_styled_frame(dialog, style='card')
+        main_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
+        # Title
+        title_label = create_styled_label(
+            main_frame,
+            text=self.get_bilingual("manage_flavors", "Manage Flavors", "إدارة النكهات"),
+            style='heading'
+        )
+        title_label.pack(pady=(20, 30))
+        
+        # Current flavors list
+        flavors_frame = create_styled_frame(main_frame, style='card')
+        flavors_frame.pack(fill='both', expand=True, padx=20, pady=(0, 20))
+        
+        flavors_label = create_styled_label(
+            flavors_frame,
+            text=self.get_bilingual("current_flavors", "Current Flavors", "النكهات الحالية"),
+            style='subheading'
+        )
+        flavors_label.pack(pady=(10, 10))
+        
+        # Load current flavors
+        current_flavors = load_hookah_flavors()
+        
+        # Flavors listbox
+        flavors_listbox = ctk.CTkTextbox(flavors_frame, height=150)
+        flavors_listbox.pack(fill='both', expand=True, padx=20, pady=(0, 20))
+        
+        for i, flavor_name in enumerate(current_flavors, 1):
+            flavors_listbox.insert("end", f"{i}. {flavor_name}\n")
+        
+        # Add new flavor section
+        add_frame = create_styled_frame(main_frame, style='card')
+        add_frame.pack(fill='x', padx=20, pady=(0, 20))
+        
+        add_label = create_styled_label(
+            add_frame,
+            text=self.get_bilingual("add_new_flavor", "Add New Flavor", "إضافة نكهة جديدة"),
+            style='subheading'
+        )
+        add_label.pack(pady=(10, 10))
+        
+        # Entry for new flavor
+        new_flavor_entry = create_styled_entry(
+            add_frame,
+            placeholder_text=self.get_bilingual("enter_flavor_name", "Enter flavor name", "أدخل اسم النكهة")
+        )
+        new_flavor_entry.pack(fill='x', padx=20, pady=(0, 10))
+        
+        def add_flavor():
+            new_flavor = new_flavor_entry.get().strip()
+            if new_flavor:
+                if add_hookah_flavor(new_flavor):
+                    show_success(self.get_bilingual("flavor_added", "Flavor added successfully", "تمت إضافة النكهة بنجاح"), self.current_language)
+                    dialog.destroy()
+                    self.manage_flavors()  # Refresh the dialog
+                else:
+                    show_error(self.get_bilingual("error_adding_flavor", "Error adding flavor", "خطأ في إضافة النكهة"), self.current_language)
+            else:
+                show_error(self.get_bilingual("enter_flavor_name", "Please enter a flavor name", "يرجى إدخال اسم النكهة"), self.current_language)
+        
+        add_button = create_styled_button(
+            add_frame,
+            text=self.get_bilingual("add", "Add", "إضافة"),
+            style='primary',
+            command=add_flavor
+        )
+        add_button.pack(pady=(0, 10))
+        
+        # Buttons frame
+        buttons_frame = create_styled_frame(main_frame, style='card')
+        buttons_frame.pack(fill='x', padx=20, pady=(0, 20))
+        
+        close_button = create_styled_button(
+            buttons_frame,
+            text=self.get_bilingual("close", "Close", "إغلاق"),
+            style='outline',
+            command=dialog.destroy
+        )
+        close_button.pack(pady=10)

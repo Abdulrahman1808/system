@@ -625,7 +625,7 @@ def delete_document(collection_name, document_id):
 # Initialize database connection when module loads
 if initialize_db():
     # Initialize collections
-    collections = ['products', 'suppliers', 'employees', 'sales']
+    collections = ['products', 'suppliers', 'employees', 'sales', 'hookah_types', 'hookah_flavors']
     for collection in collections:
         ensure_collection(collection)
 else:
@@ -633,3 +633,142 @@ else:
 
 # Close the connection when the program exits
 atexit.register(close_connection)
+
+# Dynamic Types and Flavors Management
+def load_hookah_types():
+    """Load hookah types from database or return default empty list"""
+    try:
+        # Try to load from database first
+        if db is not None:
+            collection = db['hookah_types']
+            types = list(collection.find({}, {'_id': 0}))
+            return [item.get('name', '') for item in types if item.get('name')]
+        
+        # If not in database, try to load from JSON
+        filename = os.path.join(MONGODB_DATA_PATH, "hookah_types.json")
+        if os.path.exists(filename):
+            with open(filename, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return [item.get('name', '') for item in data if item.get('name')]
+        
+        # Return empty list if no data found
+        return []
+    except Exception as e:
+        print(f"[ERROR] Error loading hookah types: {str(e)}")
+        return []
+
+def load_hookah_flavors():
+    """Load hookah flavors from database or return default empty list"""
+    try:
+        # Try to load from database first
+        if db is not None:
+            collection = db['hookah_flavors']
+            flavors = list(collection.find({}, {'_id': 0}))
+            return [item.get('name', '') for item in flavors if item.get('name')]
+        
+        # If not in database, try to load from JSON
+        filename = os.path.join(MONGODB_DATA_PATH, "hookah_flavors.json")
+        if os.path.exists(filename):
+            with open(filename, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return [item.get('name', '') for item in data if item.get('name')]
+        
+        # Return empty list if no data found
+        return []
+    except Exception as e:
+        print(f"[ERROR] Error loading hookah flavors: {str(e)}")
+        return []
+
+def save_hookah_types(types_list):
+    """Save hookah types to database and JSON"""
+    try:
+        # Prepare data for saving
+        types_data = [{'name': type_name, 'id': i+1} for i, type_name in enumerate(types_list)]
+        
+        # Save to database
+        if db is not None:
+            collection = db['hookah_types']
+            collection.delete_many({})  # Clear existing
+            if types_data:
+                collection.insert_many(types_data)
+        
+        # Save to JSON
+        filename = os.path.join(MONGODB_DATA_PATH, "hookah_types.json")
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(types_data, f, indent=4, ensure_ascii=False)
+        
+        return True
+    except Exception as e:
+        print(f"[ERROR] Error saving hookah types: {str(e)}")
+        return False
+
+def save_hookah_flavors(flavors_list):
+    """Save hookah flavors to database and JSON"""
+    try:
+        # Prepare data for saving
+        flavors_data = [{'name': flavor_name, 'id': i+1} for i, flavor_name in enumerate(flavors_list)]
+        
+        # Save to database
+        if db is not None:
+            collection = db['hookah_flavors']
+            collection.delete_many({})  # Clear existing
+            if flavors_data:
+                collection.insert_many(flavors_data)
+        
+        # Save to JSON
+        filename = os.path.join(MONGODB_DATA_PATH, "hookah_flavors.json")
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(flavors_data, f, indent=4, ensure_ascii=False)
+        
+        return True
+    except Exception as e:
+        print(f"[ERROR] Error saving hookah flavors: {str(e)}")
+        return False
+
+def add_hookah_type(type_name):
+    """Add a new hookah type"""
+    try:
+        types_list = load_hookah_types()
+        if type_name not in types_list:
+            types_list.append(type_name)
+            return save_hookah_types(types_list)
+        return True
+    except Exception as e:
+        print(f"[ERROR] Error adding hookah type: {str(e)}")
+        return False
+
+def add_hookah_flavor(flavor_name):
+    """Add a new hookah flavor"""
+    try:
+        flavors_list = load_hookah_flavors()
+        if flavor_name not in flavors_list:
+            flavors_list.append(flavor_name)
+            return save_hookah_flavors(flavors_list)
+        return True
+    except Exception as e:
+        print(f"[ERROR] Error adding hookah flavor: {str(e)}")
+        return False
+
+def remove_hookah_type(type_name):
+    """Remove a hookah type"""
+    try:
+        types_list = load_hookah_types()
+        if type_name in types_list:
+            types_list.remove(type_name)
+            return save_hookah_types(types_list)
+        return True
+    except Exception as e:
+        print(f"[ERROR] Error removing hookah type: {str(e)}")
+        return False
+
+def remove_hookah_flavor(flavor_name):
+    """Remove a hookah flavor"""
+    try:
+        flavors_list = load_hookah_flavors()
+        if flavor_name in flavors_list:
+            flavors_list.remove(flavor_name)
+            return save_hookah_flavors(flavors_list)
+        return True
+    except Exception as e:
+        print(f"[ERROR] Error removing hookah flavor: {str(e)}")
+        return False
