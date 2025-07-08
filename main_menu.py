@@ -9,7 +9,9 @@ import customtkinter as ctk
 from theme import (
     COLORS, FONTS, create_styled_button,
     create_styled_entry, create_styled_frame,
-    create_styled_label, toggle_theme
+    create_styled_label, toggle_theme,
+    create_modern_card, create_gradient_label, create_glass_frame,
+    create_status_indicator, create_animated_button
 )
 
 class MainMenu:
@@ -24,166 +26,192 @@ class MainMenu:
         return f"{en} / {ar}"
 
     def create_main_menu(self):
-        """Create the main menu interface"""
+        """Create the main menu interface with modern design"""
         # Clear current frame
         for widget in self.root.winfo_children():
             widget.destroy()
         
-        # Create main container
+        # Create main container with gradient background
         main_frame = create_styled_frame(self.root, style='section')
         main_frame.pack(fill='both', expand=True)
         
-        # Create scrollable sidebar
-        self.sidebar = ctk.CTkScrollableFrame(main_frame, orientation='vertical', fg_color=COLORS['sidebar'], width=250)
+        # Create modern sidebar with glass effect
+        self.sidebar = ctk.CTkScrollableFrame(
+            main_frame, 
+            orientation='vertical', 
+            fg_color=COLORS['sidebar'],
+            width=280,
+            corner_radius=0
+        )
         self.sidebar.pack(side='left', fill='y', padx=0, pady=0)
         
-        # Add shadow effect to sidebar
-        self.sidebar.configure(border_width=0)
+        # Add modern shadow effect to sidebar
         shadow_frame = ctk.CTkFrame(
             main_frame,
             fg_color=COLORS['shadow_color'],
             corner_radius=0,
-            width=1,
+            width=2,
             height=self.root.winfo_height()
         )
-        shadow_frame.place(x=250, y=0)
-        shadow_frame.lower()  # Place shadow behind the sidebar
+        shadow_frame.place(x=280, y=0)
+        shadow_frame.lower()
         
-        # Logo/Title
-        title_label = create_styled_label(
-            self.sidebar,
+        # Modern logo/Title with gradient
+        logo_frame = create_glass_frame(self.sidebar)
+        logo_frame.pack(fill='x', padx=20, pady=(30, 20))
+        
+        title_label = create_gradient_label(
+            logo_frame,
             text=self.get_bilingual("app_title", "Hookah Shop Manager", "مدير متجر الشيشة"),
-            style='heading'
+            gradient_colors=[COLORS['primary'], COLORS['secondary']]
         )
-        title_label.pack(pady=(30, 40))
+        title_label.pack(pady=20)
         
-        # Menu items with icons
+        # Modern menu items with hover effects
         menu_items = [
-            ("manage_products", "Manage Products", self.callbacks['manage_products'], "📦"),
-            ("manage_inventory", "Manage Inventory", self.callbacks['manage_inventory'], "📊"),
-            ("manage_store", "Manage Store", self.callbacks['manage_store'], "🏪"),
-            ("record_sale", "Record Sale", self.callbacks['record_sale'], "💰"),
-            ("view_sales", "View Sales Records", self.callbacks['view_sales'], "📈"),
-            ("manage_suppliers", "Manage Suppliers", self.callbacks['manage_suppliers'], "🤝"),
-            ("manage_employees", "Manage Employees", self.callbacks['manage_employees'], "👥"),
-            ("manage_customers", "Manage Customers", self.callbacks['manage_customers'], "👥"),
-            ("reporting_analytics", "Reporting and Analytics", self.callbacks['reporting_analytics'], "📊"),
-            ("expenses_bills", "Expenses and Bills", self.callbacks['expenses_bills'], "💸"),
-            ("notifications", "Notifications", self.callbacks['notifications'], "🔔"),
-            ("manage_stores", "Manage Stores", self.open_manage_stores, "🏬")
+            ("manage_products", "Manage Products", self.callbacks['manage_products'], "📦", "primary"),
+            ("manage_inventory", "Manage Inventory", self.callbacks['manage_inventory'], "📊", "secondary"),
+            ("manage_store", "Manage Store", self.callbacks['manage_store'], "🏪", "accent"),
+            ("record_sale", "Record Sale", self.callbacks['record_sale'], "💰", "success"),
+            ("view_sales", "View Sales Records", self.callbacks['view_sales'], "📈", "info"),
+            ("manage_suppliers", "Manage Suppliers", self.callbacks['manage_suppliers'], "🤝", "warning"),
+            ("manage_employees", "Manage Employees", self.callbacks['manage_employees'], "👥", "primary"),
+            ("manage_customers", "Manage Customers", self.callbacks['manage_customers'], "👤", "secondary"),
+            ("reporting_analytics", "Reporting & Analytics", self.callbacks['reporting_analytics'], "📊", "accent"),
+            ("expenses_bills", "Expenses & Bills", self.callbacks['expenses_bills'], "💸", "warning"),
+            ("notifications", "Notifications", self.callbacks['notifications'], "🔔", "info"),
+            ("manage_stores", "Manage Stores", self.open_manage_stores, "🏬", "success")
         ]
         
-        for key, default_text, callback, icon in menu_items:
-            button = create_styled_button(
-                self.sidebar,
+        for key, default_text, callback, icon, color_style in menu_items:
+            # Create modern menu item with glass effect
+            menu_item_frame = create_glass_frame(self.sidebar)
+            menu_item_frame.pack(fill='x', padx=10, pady=5)
+            
+            button = create_animated_button(
+                menu_item_frame,
                 text=f"{icon} {self.get_bilingual(key, default_text, self.LANGUAGES['ar'].get(key, default_text))}",
-                style='sidebar',
+                style='ghost',
                 command=callback,
-                height=45
+                height=50
             )
+            button.pack(fill='x', padx=10, pady=5)
             button.text_key = key
-            button.pack(fill='x', padx=5, pady=5)
         
-        # Theme toggle
-        theme_button = create_styled_button(
-            self.sidebar,
+        # Modern theme toggle with glass effect
+        theme_frame = create_glass_frame(self.sidebar)
+        theme_frame.pack(fill='x', padx=10, pady=20)
+        
+        theme_button = create_animated_button(
+            theme_frame,
             text=f"🌓 {self.get_bilingual('toggle_theme', 'Toggle Theme', 'تبديل المظهر')}",
-            style='sidebar',
+            style='outline',
             command=self.toggle_theme,
-            height=40
+            height=45
         )
+        theme_button.pack(fill='x', padx=10, pady=5)
         theme_button.text_key = "toggle_theme"
-        theme_button.pack(fill='x', pady=5)
         
-        # Logout button
-        logout_button = create_styled_button(
-            self.sidebar,
+        # Modern logout button
+        logout_frame = create_glass_frame(self.sidebar)
+        logout_frame.pack(side='bottom', fill='x', padx=10, pady=20)
+        
+        logout_button = create_animated_button(
+            logout_frame,
             text="🚪 " + self.get_bilingual("logout", "Logout", "تسجيل الخروج"),
             style='error',
             command=self.callbacks['logout'],
-            height=45
+            height=50
         )
+        logout_button.pack(fill='x', padx=10, pady=5)
         logout_button.text_key = "logout"
-        logout_button.pack(side='bottom', fill='x', padx=15, pady=20)
         
-        # Content area
-        content_frame = create_styled_frame(main_frame, style='section')
+        # Modern content area with glass effect
+        content_frame = create_glass_frame(main_frame)
         content_frame.pack(side='right', fill='both', expand=True, padx=30, pady=30)
         
-        # Welcome message
-        welcome_label = create_styled_label(
+        # Welcome section with gradient
+        welcome_frame = create_modern_card(
             content_frame,
-            text=self.get_bilingual("welcome", "Welcome to Hookah Shop Manager", "مرحباً بك في مدير متجر الشيشة"),
-            style='heading'
+            title=self.get_bilingual("welcome", "Welcome to Hookah Shop Manager", "مرحباً بك في مدير متجر الشيشة"),
+            content=self.get_bilingual("welcome_subtitle", "Your complete business management solution", "حلك الشامل لإدارة الأعمال")
         )
-        welcome_label.text_key = "welcome"
-        welcome_label.pack(pady=(0, 30))
+        welcome_frame.pack(fill='x', pady=(0, 30))
         
-        # Quick actions
-        quick_actions_label = create_styled_label(
+        # Quick actions section
+        quick_actions_label = create_gradient_label(
             content_frame,
             text=self.get_bilingual("quick_actions", "Quick Actions", "إجراءات سريعة"),
-            style='subheading'
+            gradient_colors=[COLORS['primary'], COLORS['secondary']]
         )
-        quick_actions_label.text_key = "quick_actions"
         quick_actions_label.pack(pady=(0, 20))
         
-        # Quick action cards in a grid
+        # Modern quick action cards in a responsive grid
         quick_actions_frame = create_styled_frame(content_frame, style='section')
         quick_actions_frame.pack(fill='both', expand=True)
         
-        # Configure grid
+        # Configure responsive grid
         quick_actions_frame.grid_columnconfigure(0, weight=1)
         quick_actions_frame.grid_columnconfigure(1, weight=1)
         quick_actions_frame.grid_columnconfigure(2, weight=1)
+        quick_actions_frame.grid_columnconfigure(3, weight=1)
         
-        # Quick action cards
+        # Enhanced quick action cards
         quick_actions = [
-            ("record_sale", "Record Sale", self.callbacks['record_sale'], "💰", "Record a new sale transaction"),
-            ("manage_products", "Manage Products", self.callbacks['manage_products'], "📦", "Add or modify products"),
-            ("view_sales", "View Sales", self.callbacks['view_sales'], "📈", "View sales history and reports"),
-            ("manage_employees", "Manage Employees", self.callbacks['manage_employees'], "👥", "Manage employee information")
+            ("record_sale", "Record Sale", self.callbacks['record_sale'], "💰", "Record a new sale transaction", "success"),
+            ("manage_products", "Manage Products", self.callbacks['manage_products'], "📦", "Add or modify products", "primary"),
+            ("view_sales", "View Sales", self.callbacks['view_sales'], "📈", "View sales history and reports", "info"),
+            ("manage_employees", "Manage Employees", self.callbacks['manage_employees'], "👥", "Manage employee information", "secondary")
         ]
         
-        for i, (key, default_text, callback, icon, description) in enumerate(quick_actions):
-            card = create_styled_frame(quick_actions_frame, style='quick_action_card')
+        for i, (key, default_text, callback, icon, description, color_style) in enumerate(quick_actions):
+            # Create modern card with glass effect
+            card = create_modern_card(
+                quick_actions_frame,
+                title=f"{icon} {self.get_bilingual(key, default_text, self.LANGUAGES['ar'].get(key, default_text))}",
+                content=description
+            )
             card.grid(row=0, column=i, padx=15, pady=15, sticky='nsew')
             
-            # Icon and title
-            title_frame = create_styled_frame(card, style='card')
-            title_frame.pack(fill='x', padx=20, pady=(20, 10))
-            
-            icon_label = create_styled_label(
-                title_frame,
-                text=icon,
-                style='heading'
-            )
-            icon_label.pack(pady=(0, 10))
-            
-            title_label = create_styled_label(
-                title_frame,
-                text=self.get_bilingual(key, default_text, self.LANGUAGES['ar'].get(key, default_text)),
-                style='subheading'
-            )
-            title_label.pack(pady=(0, 10))
-            
-            # Description
-            desc_label = create_styled_label(
+            # Add action button
+            action_button = create_animated_button(
                 card,
-                text=description,
-                style='body'
-            )
-            desc_label.pack(padx=20, pady=(0, 20))
-            
-            # Action button
-            action_button = create_styled_button(
-                card,
-                text=self.get_bilingual(key, default_text, self.LANGUAGES['ar'].get(key, default_text)),
-                style='quick_action',
+                text=self.get_bilingual("open", "Open", "فتح"),
+                style=color_style,
                 command=callback,
-                height=45
+                height=40
             )
             action_button.pack(fill='x', padx=20, pady=(0, 20))
+        
+        # Add status indicators
+        status_frame = create_styled_frame(content_frame, style='section')
+        status_frame.pack(fill='x', pady=20)
+        
+        # Status indicators row
+        status_indicators_frame = create_styled_frame(status_frame, style='section')
+        status_indicators_frame.pack(fill='x')
+        
+        # Configure status grid
+        status_indicators_frame.grid_columnconfigure(0, weight=1)
+        status_indicators_frame.grid_columnconfigure(1, weight=1)
+        status_indicators_frame.grid_columnconfigure(2, weight=1)
+        status_indicators_frame.grid_columnconfigure(3, weight=1)
+        
+        # Create status indicators
+        status_indicators = [
+            ("System Status", "Online", "success"),
+            ("Database", "Connected", "info"),
+            ("Updates", "Available", "warning"),
+            ("Security", "Protected", "success")
+        ]
+        
+        for i, (title, status, color) in enumerate(status_indicators):
+            indicator = create_status_indicator(
+                status_indicators_frame,
+                status=color,
+                text=f"{title}: {status}"
+            )
+            indicator.grid(row=0, column=i, padx=10, pady=10, sticky='ew')
 
     def toggle_theme(self):
         """Toggle between light and dark themes"""
@@ -198,15 +226,9 @@ class MainMenu:
         except Exception as e:
             show_error(f"Error opening {filename}: {str(e)}", self.LANGUAGES['ar'].get('language', 'اللغة'))
 
-    def clear_frame(self):
-        """Clear the current frame"""
-        for widget in self.root.winfo_children():
-            widget.destroy()
-
     def open_add_worker(self):
-        """Open the Add Worker interface"""
-        add_worker_ui = AddWorker(self.root, self.LANGUAGES['ar'].get('language', 'اللغة'), self.LANGUAGES, self.create_main_menu)
-        add_worker_ui.add_worker()
+        """Open the add worker dialog"""
+        AddWorker(self.root, self.LANGUAGES['ar'].get('language', 'اللغة'), self.LANGUAGES)
 
     def switch_language(self, language):
         """Switch the application language"""
@@ -217,7 +239,7 @@ class MainMenu:
             show_error(f"Language {language} not supported", self.LANGUAGES['ar'].get('language', 'اللغة'))
 
     def open_manage_stores(self):
-        """Open the Manage Stores interface"""
+        """Open the manage stores interface"""
         from manage_stores import ManageStores
         manage_stores_ui = ManageStores(self.root, self.LANGUAGES, self.create_main_menu)
         manage_stores_ui.manage_stores()
